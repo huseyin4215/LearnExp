@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { NEWS_ITEMS } from '../constants';
+import * as constants from '../constants';
 import type { NewsItem } from '../types';
 
 const NewsSlider: React.FC = () => {
@@ -9,7 +9,7 @@ const NewsSlider: React.FC = () => {
 
   const slide = (dir: 'next' | 'prev') => {
     if (dir === 'next') {
-      setCurrentIndex(prev => Math.min(prev + 1, NEWS_ITEMS.length - itemsPerView));
+      setCurrentIndex(prev => Math.min(prev + 1, constants.NEWS_ITEMS.length - itemsPerView));
     } else {
       setCurrentIndex(prev => Math.max(prev - 1, 0));
     }
@@ -27,7 +27,7 @@ const NewsSlider: React.FC = () => {
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)` }}
         >
-          {NEWS_ITEMS.map((item: NewsItem, index: number) => (
+          {constants.NEWS_ITEMS.map((item: NewsItem, index: number) => (
             <div key={item.id} className="flex-none w-full md:w-1/2 lg:w-1/3 px-3">
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden h-64 hover:-translate-y-1 transition-transform shadow-sm">
                 <div className="flex h-full">
@@ -57,7 +57,7 @@ const NewsSlider: React.FC = () => {
       <button onClick={() => slide('prev')} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-2 shadow-lg border border-gray-200 disabled:opacity-50" disabled={currentIndex === 0}>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
-      <button onClick={() => slide('next')} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-lg border border-gray-200 disabled:opacity-50" disabled={currentIndex >= NEWS_ITEMS.length - itemsPerView}>
+      <button onClick={() => slide('next')} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-lg border border-gray-200 disabled:opacity-50" disabled={currentIndex >= constants.NEWS_ITEMS.length - itemsPerView}>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
     </div>

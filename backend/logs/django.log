@@ -1,0 +1,493 @@
+INFO 2025-12-25 11:08:09,007 autoreload Watching for file changes with StatReloader
+INFO 2025-12-25 11:20:53,062 autoreload Watching for file changes with StatReloader
+WARNING 2025-12-25 11:21:50,022 log Not Found: /favicon.ico
+ERROR 2025-12-25 11:21:59,316 log Internal Server Error: /admin/webscraping/scraperconfig/
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: webscraping_scraperconfig
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 714, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 1981, in changelist_view
+    cl = self.get_changelist_instance(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 862, in get_changelist_instance
+    return ChangeList(
+        request,
+    ...<12 lines>...
+        self.search_help_text,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 145, in __init__
+    self.get_results(request)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 312, in get_results
+    result_count = paginator.count
+                   ^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\paginator.py", line 110, in count
+    return c()
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 618, in count
+    return self.query.get_count(using=self.db)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\query.py", line 616, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\query.py", line 602, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: webscraping_scraperconfig
+ERROR 2025-12-25 11:22:03,063 log Internal Server Error: /admin/apiCallback/callbackconfig/
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: apiCallback_callbackconfig
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 714, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 1981, in changelist_view
+    cl = self.get_changelist_instance(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 862, in get_changelist_instance
+    return ChangeList(
+        request,
+    ...<12 lines>...
+        self.search_help_text,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 145, in __init__
+    self.get_results(request)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 312, in get_results
+    result_count = paginator.count
+                   ^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\paginator.py", line 110, in count
+    return c()
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 618, in count
+    return self.query.get_count(using=self.db)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\query.py", line 616, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\query.py", line 602, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: apiCallback_callbackconfig
+ERROR 2025-12-25 11:22:05,507 log Internal Server Error: /admin/apiCallback/callbacklog/
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: apiCallback_callbackconfig
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 714, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 1981, in changelist_view
+    cl = self.get_changelist_instance(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 862, in get_changelist_instance
+    return ChangeList(
+        request,
+    ...<12 lines>...
+        self.search_help_text,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 144, in __init__
+    self.queryset = self.get_queryset(request)
+                    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 539, in get_queryset
+    ) = self.get_filters(request)
+        ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 215, in get_filters
+    spec = field_list_filter_class(
+        field,
+    ...<4 lines>...
+        field_path=field_path,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 216, in create
+    return list_filter_class(
+        field, request, params, model, model_admin, field_path=field_path
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 231, in __init__
+    self.lookup_choices = self.field_choices(field, request, model_admin)
+                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 272, in field_choices
+    return field.get_choices(include_blank=False, ordering=ordering)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\fields\__init__.py", line 1075, in get_choices
+    (choice_func(x), str(x)) for x in qs
+                                      ^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 398, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: apiCallback_callbackconfig
+ERROR 2025-12-25 11:22:08,723 log Internal Server Error: /admin/webscraping/scrapedcontent/
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: webscraping_scraperconfig
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 714, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 1981, in changelist_view
+    cl = self.get_changelist_instance(request)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 862, in get_changelist_instance
+    return ChangeList(
+        request,
+    ...<12 lines>...
+        self.search_help_text,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 144, in __init__
+    self.queryset = self.get_queryset(request)
+                    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 539, in get_queryset
+    ) = self.get_filters(request)
+        ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\views\main.py", line 215, in get_filters
+    spec = field_list_filter_class(
+        field,
+    ...<4 lines>...
+        field_path=field_path,
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 216, in create
+    return list_filter_class(
+        field, request, params, model, model_admin, field_path=field_path
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 231, in __init__
+    self.lookup_choices = self.field_choices(field, request, model_admin)
+                          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\contrib\admin\filters.py", line 272, in field_choices
+    return field.get_choices(include_blank=False, ordering=ordering)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\fields\__init__.py", line 1075, in get_choices
+    (choice_func(x), str(x)) for x in qs
+                                      ^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 398, in __iter__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\rukiye\Desktop\LearnExp\backend\venv\Lib\site-packages\django\db\backends\sqlite3\base.py", line 328, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: webscraping_scraperconfig
+INFO 2025-12-25 11:25:20,943 autoreload Watching for file changes with StatReloader
+INFO 2026-01-07 19:57:26,607 autoreload Watching for file changes with StatReloader
+INFO 2026-01-07 20:05:15,885 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:20:44,591 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:20:55,904 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\settings.py changed, reloading.
+INFO 2026-02-05 16:20:56,543 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:07,106 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:17,946 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\apps.py changed, reloading.
+INFO 2026-02-05 16:21:18,481 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\apps.py changed, reloading.
+INFO 2026-02-05 16:21:18,848 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:19,364 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:37,674 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:48,660 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\apps.py changed, reloading.
+INFO 2026-02-05 16:21:48,839 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\settings.py changed, reloading.
+INFO 2026-02-05 16:21:49,205 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\settings.py changed, reloading.
+INFO 2026-02-05 16:21:49,959 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:50,027 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:21:50,391 autoreload Watching for file changes with StatReloader
+WARNING 2026-02-05 16:22:14,986 log Not Found: /favicon.ico
+INFO 2026-02-05 16:26:50,700 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:26:50,762 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:26:50,831 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:26:54,902 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:26:54,924 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:26:54,956 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:33:24,134 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:33:38,706 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:33:38,743 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:33:39,116 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:33:39,205 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\migrations\0001_initial.py changed, reloading.
+INFO 2026-02-05 16:33:41,030 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:33:41,061 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:33:41,408 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:33:41,506 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:36:23,456 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:37:07,169 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:40:25,449 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:40:25,470 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:40:25,552 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:40:25,857 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:40:25,878 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:40:27,740 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:40:27,740 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:40:27,789 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:40:28,131 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:40:28,132 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:41:35,375 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api\views.py changed, reloading.
+INFO 2026-02-05 16:41:35,560 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:41:35,969 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api\views.py changed, reloading.
+INFO 2026-02-05 16:41:35,989 autoreload C:\Users\sarib\Desktop\LearnExp\backend\config\urls.py changed, reloading.
+INFO 2026-02-05 16:41:36,405 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api\urls.py changed, reloading.
+INFO 2026-02-05 16:41:36,938 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:41:37,022 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:41:37,479 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:41:37,481 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 16:41:37,838 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:11,766 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:05:11,805 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:05:12,497 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:05:12,522 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:05:12,680 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:05:13,483 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:13,489 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:14,650 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:14,658 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:14,742 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:38,634 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:05:38,769 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:05:38,792 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:05:39,002 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:05:39,017 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:05:40,385 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:40,562 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:40,615 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:40,987 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:05:41,020 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:06:26,132 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:06:26,154 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:06:26,311 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:06:26,391 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:06:27,075 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:06:27,562 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:06:27,564 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:06:27,776 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:06:27,889 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:06:28,628 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:00,676 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:01,036 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:01,339 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:01,344 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:01,347 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:01,935 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:02,673 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:03,206 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:03,208 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:03,212 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:20,753 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:07:20,873 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\admin.py changed, reloading.
+INFO 2026-02-05 17:07:21,018 autoreload C:\Users\sarib\Desktop\LearnExp\backend\api_collecter\models.py changed, reloading.
+INFO 2026-02-05 17:07:21,028 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\admin.py changed, reloading.
+INFO 2026-02-05 17:07:21,345 autoreload C:\Users\sarib\Desktop\LearnExp\backend\webscraping\models.py changed, reloading.
+INFO 2026-02-05 17:07:22,669 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:22,730 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:22,865 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:22,885 autoreload Watching for file changes with StatReloader
+INFO 2026-02-05 17:07:23,100 autoreload Watching for file changes with StatReloader

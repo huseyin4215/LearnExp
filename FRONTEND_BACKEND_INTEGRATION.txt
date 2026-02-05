@@ -1,0 +1,581 @@
+================================================================================
+FRONTEND DOSYA YAPISI VE BACKEND ENTEGRASYON REHBERI
+LearnExp - Akademik İçerik Platformu
+================================================================================
+
+İÇİNDEKİLER
+1. Frontend Dosya Yapısı
+2. Backend API Endpoint'leri
+3. Entegrasyon Noktaları (View Bazında)
+4. Veri Akışı ve State Yönetimi
+5. API Service Implementation
+
+================================================================================
+1. FRONTEND DOSYA YAPISI
+================================================================================
+
+frontend/
+├── public/
+│   └── index.html                   # Ana HTML dosyası
+│
+├── src/
+│   ├── main.tsx                     # Uygulama giriş noktası, BrowserRouter wrapper
+│   ├── App.tsx                      # Ana routing yapılandırması
+│   ├── index.css                    # Global Tailwind CSS stilleri
+│   │
+│   ├── types.ts                     # TypeScript tip tanımları
+│   │   ├── ViewType                 # Route tipleri
+│   │   ├── ContentType              # İçerik tipleri (article, conference, funding)
+│   │   ├── AcademicContent          # Akademik içerik interface
+│   │   ├── User                     # Kullanıcı interface
+│   │   └── ChatMessage              # Chat mesaj interface
+│   │
+│   ├── constants.ts                 # Mock data (production'da silinecek)
+│   │   ├── MOCK_USER                # Örnek kullanıcı verisi
+│   │   ├── MOCK_CONTENT             # Örnek akademik içerik
+│   │   └── NEWS_ITEMS               # Örnek haberler
+│   │
+│   ├── components/                  # Yeniden kullanılabilir componentler
+│   │   ├── Navbar.tsx              # Ana navigasyon bar
+│   │   ├── ContentCard.tsx         # İçerik kartı (article/conference/funding)
+│   │   ├── NewsSlider.tsx          # Haber slider componenti
+│   │   └── ChatOverlay.tsx         # AI chat overlay
+│   │
+│   └── views/                       # Sayfa komponenleri (route'lar)
+│       ├── Dashboard.tsx            # Ana sayfa (/)
+│       ├── SearchDashboard.tsx      # Arama sayfası (/search)
+│       ├── MyLibrary.tsx            # Kaydedilenler (/library)
+│       ├── Profile.tsx              # Profil (/profile)
+│       └── Settings.tsx             # Ayarlar (/settings)
+│
+├── package.json                     # NPM dependencies
+├── tailwind.config.js              # Tailwind CSS konfigürasyonu
+├── postcss.config.js               # PostCSS konfigürasyonu
+└── tsconfig.json                   # TypeScript konfigürasyonu
+
+
+================================================================================
+2. BACKEND API ENDPOINT'LERİ (Oluşturulması Gereken)
+================================================================================
+
+Base URL: http://localhost:8000/api/
+
+--------------------------------------------------
+2.1 AUTHENTICATION & USER ENDPOINTS
+--------------------------------------------------
+
+POST   /api/auth/register/
+Body: { username, email, password, institution, role }
+Response: { user_id, token, user_data }
+Açıklama: Yeni kullanıcı kaydı
+
+POST   /api/auth/login/
+Body: { username, password }
+Response: { token, user_data }
+Açıklama: Kullanıcı girişi
+
+POST   /api/auth/logout/
+Headers: { Authorization: "Token xxx" }
+Response: { success: true }
+Açıklama: Kullanıcı çıkışı
+
+GET    /api/user/profile/
+Headers: { Authorization: "Token xxx" }
+Response: { id, name, email, institution, role, bio, interests }
+Açıklama: Kullanıcı profil bilgilerini getir
+
+PUT    /api/user/profile/
+Headers: { Authorization: "Token xxx" }
+Body: { name, bio, institution, role }
+Response: { success: true, updated_user }
+Açıklama: Profil bilgilerini güncelle
+
+PUT    /api/user/interests/
+Headers: { Authorization: "Token xxx" }
+Body: { interests: ["AI", "ML", ...] }
+Response: { success: true, interests }
+Açıklama: İlgi alanlarını güncelle
+
+--------------------------------------------------
+2.2 CONTENT ENDPOINTS (Scraped Content)
+--------------------------------------------------
+
+GET    /api/content/
+Query Params: ?page=1&type=article&search=AI&tags=ML
+Headers: { Authorization: "Token xxx" }
+Response: {
+    count: 150,
+    next: "url",
+    previous: null,
+    results: [
+        {
+            id: 1,
+            title: "...",
+            description: "...",
+            authors: "...",
+            content_type: "article",
+            source: "arXiv",
+            published_date: "2024-12-20",
+            url: "...",
+            tags: ["AI", "ML"],
+            location: null,
+            deadline: null,
+            amount: null,
+            scraped_at: "2024-12-24T10:00:00Z"
+        },
+        ...
+    ]
+}
+Açıklama: Scrape edilmiş içerikleri listele (filtreleme destekli)
+
+GET    /api/content/{id}/
+Headers: { Authorization: "Token xxx" }
+Response: { id, title, description, ... (tek içerik detayı) }
+Açıklama: Tek bir içeriğin detaylarını getir
+
+GET    /api/content/latest/
+Query Params: ?limit=10
+Headers: { Authorization: "Token xxx" }
+Response: [ { id, title, ... }, ... ]
+Açıklama: En son eklenen içerikleri getir
+
+GET    /api/content/recommended/
+Headers: { Authorization: "Token xxx" }
+Response: [ { id, title, ... }, ... ]
+Açıklama: Kullanıcı ilgi alanlarına göre önerilen içerikler
+
+--------------------------------------------------
+2.3 SAVED CONTENT (My Library)
+--------------------------------------------------
+
+GET    /api/saved/
+Headers: { Authorization: "Token xxx" }
+Response: [ { content_id, content_data, saved_at }, ... ]
+Açıklama: Kullanıcının kaydettiği içerikleri getir
+
+POST   /api/saved/
+Headers: { Authorization: "Token xxx" }
+Body: { content_id: 123 }
+Response: { success: true, saved_at }
+Açıklama: İçeriği kaydet
+
+DELETE /api/saved/{content_id}/
+Headers: { Authorization: "Token xxx" }
+Response: { success: true }
+Açıklama: Kaydedilen içeriği sil
+
+--------------------------------------------------
+2.4 NEWS ENDPOINTS
+--------------------------------------------------
+
+GET    /api/news/
+Query Params: ?limit=10
+Response: [
+    {
+        id: 1,
+        title: "...",
+        description: "...",
+        source: "...",
+        date: "2024-12-20",
+        tags: ["AI", "Research"],
+        image_url: "..."
+    },
+    ...
+]
+Açıklama: Haber/duyuruları listele
+
+--------------------------------------------------
+2.5 SEARCH ENDPOINTS
+--------------------------------------------------
+
+GET    /api/search/
+Query Params: ?q=machine+learning&type=article&source=arxiv&date_from=2024-01-01
+Headers: { Authorization: "Token xxx" }
+Response: {
+    results: [ { id, title, ... }, ... ],
+    count: 45,
+    filters_applied: { type: "article", source: "arxiv" }
+}
+Açıklama: Gelişmiş arama
+
+--------------------------------------------------
+2.6 CHAT/AI ASSISTANT
+--------------------------------------------------
+
+POST   /api/chat/
+Headers: { Authorization: "Token xxx" }
+Body: { message: "What are the latest AI papers?" }
+Response: { 
+    reply: "Here are the latest...",
+    suggested_content: [ { id, title }, ... ]
+}
+Açıklama: AI asistan ile sohbet
+
+
+================================================================================
+3. ENTEGRASYON NOKTALARI (VIEW BAZINDA)
+================================================================================
+
+--------------------------------------------------
+3.1 DASHBOARD (views/Dashboard.tsx)
+--------------------------------------------------
+
+Şu an:
+- Mock data kullanıyor (MOCK_CONTENT, NEWS_ITEMS)
+- State: savedIds (local state)
+
+Backend Entegrasyonu:
+1. Component mount'ta:
+   - GET /api/content/latest/ → En son içerikleri çek
+   - GET /api/news/ → Haberleri çek
+   - GET /api/saved/ → Kaydedilenleri çek (savedIds state'ini doldur)
+
+2. toggleSave fonksiyonu:
+   - Eğer saved ise: DELETE /api/saved/{id}/
+   - Değilse: POST /api/saved/ with { content_id }
+
+3. Arama inputu:
+   - Değişiklikte: /search sayfasına yönlendir
+
+Örnek Implementation:
+```typescript
+useEffect(() => {
+    // Fetch latest content
+    fetch('http://localhost:8000/api/content/latest/?limit=10', {
+        headers: { 'Authorization': `Token ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setContent(data));
+    
+    // Fetch saved IDs
+    fetch('http://localhost:8000/api/saved/', {
+        headers: { 'Authorization': `Token ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const ids = new Set(data.map(item => item.content_id));
+        setSavedIds(ids);
+    });
+}, []);
+```
+
+--------------------------------------------------
+3.2 SEARCH DASHBOARD (views/SearchDashboard.tsx)
+--------------------------------------------------
+
+Şu an:
+- Mock data kullanıyor
+- Filtreler sadece UI'da var (çalışmıyor)
+
+Backend Entegrasyonu:
+1. Component mount + filter değişikliklerinde:
+   - GET /api/search/?q={query}&type={type}&source={source}&date={date}
+
+2. Filter state management:
+   - contentTypeFilter, sourceFilter, dateFilter state'leri
+   - Her değişiklikte API call
+
+3. Pagination:
+   - GET /api/search/?page={pageNum}
+
+Örnek Implementation:
+```typescript
+const [filters, setFilters] = useState({
+    query: '',
+    type: [],
+    source: [],
+    dateRange: 'all'
+});
+
+useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.query) params.append('q', filters.query);
+    filters.type.forEach(t => params.append('type', t));
+    
+    fetch(`http://localhost:8000/api/search/?${params}`, {
+        headers: { 'Authorization': `Token ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setResults(data.results));
+}, [filters]);
+```
+
+--------------------------------------------------
+3.3 MY LIBRARY (views/MyLibrary.tsx)
+--------------------------------------------------
+
+Şu an:
+- Hardcoded saved items (MOCK_CONTENT + extra items)
+
+Backend Entegrasyonu:
+1. Component mount'ta:
+   - GET /api/saved/ → Tüm kaydedilenleri çek
+
+2. Search in library:
+   - Local filtering veya
+   - GET /api/saved/?search={query}
+
+3. Remove from library:
+   - DELETE /api/saved/{id}/
+
+Örnek Implementation:
+```typescript
+useEffect(() => {
+    fetch('http://localhost:8000/api/saved/', {
+        headers: { 'Authorization': `Token ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setSavedItems(data));
+}, []);
+```
+
+--------------------------------------------------
+3.4 PROFILE (views/Profile.tsx)
+--------------------------------------------------
+
+Şu an:
+- MOCK_USER data kullanıyor
+- Read-only görünüm
+
+Backend Entegrasyonu:
+1. Component mount'ta:
+   - GET /api/user/profile/ → Profil bilgilerini çek
+
+2. Future: Edit mode ekle
+   - PUT /api/user/profile/ → Güncellemeleri kaydet
+
+Örnek Implementation:
+```typescript
+useEffect(() => {
+    fetch('http://localhost:8000/api/user/profile/', {
+        headers: { 'Authorization': `Token ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setUserData(data));
+}, []);
+```
+
+--------------------------------------------------
+3.5 SETTINGS (views/Settings.tsx)
+--------------------------------------------------
+
+Şu an:
+- Local state, değişiklikler kaydedilmiyor
+
+Backend Entegrasyonu:
+1. Account tab - Save button:
+   - PUT /api/user/profile/
+
+2. Interests tab - Add/Remove:
+   - PUT /api/user/interests/ with { interests: [...] }
+
+3. Security tab - Change password:
+   - POST /api/user/change-password/
+
+4. Notifications tab:
+   - PUT /api/user/notification-settings/
+
+Örnek Implementation:
+```typescript
+const handleSaveAccount = () => {
+    fetch('http://localhost:8000/api/user/profile/', {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Token ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, bio, institution, role })
+    })
+    .then(res => res.json())
+    .then(data => {
+        // Show success message
+    });
+};
+```
+
+--------------------------------------------------
+3.6 CHAT OVERLAY (components/ChatOverlay.tsx)
+--------------------------------------------------
+
+Şu an:
+- Simulated responses (setTimeout)
+
+Backend Entegrasyonu:
+1. handleSend fonksiyonu:
+   - POST /api/chat/ with { message }
+   - Response'u mesaj listesine ekle
+
+Örnek Implementation:
+```typescript
+const handleSend = async () => {
+    const userMessage = input;
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    
+    const response = await fetch('http://localhost:8000/api/chat/', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Token ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: userMessage })
+    });
+    
+    const data = await response.json();
+    setMessages(prev => [...prev, { role: 'model', text: data.reply }]);
+};
+```
+
+
+================================================================================
+4. VERİ AKIŞI VE STATE YÖNETİMİ
+================================================================================
+
+4.1 AUTHENTICATION FLOW
+------------------------
+1. User → Login Page
+2. POST /api/auth/login/ → Get token
+3. Store token in localStorage
+4. All API requests → Include token in header
+5. If 401 error → Redirect to login
+
+4.2 GLOBAL STATE (Önerilen)
+---------------------------
+Context API veya Zustand kullan:
+
+AuthContext:
+- user: User | null
+- token: string | null
+- login(username, password)
+- logout()
+- isAuthenticated: boolean
+
+ContentContext:
+- savedContent: Set<number>
+- toggleSave(id)
+- refreshSaved()
+
+4.3 API REQUEST INTERCEPTOR (Önerilen)
+--------------------------------------
+Tek bir API utility oluştur:
+
+// src/utils/api.ts
+const BASE_URL = 'http://localhost:8000/api';
+
+export const api = {
+    get: (endpoint) => fetch(`${BASE_URL}${endpoint}`, {
+        headers: { 'Authorization': `Token ${getToken()}` }
+    }),
+    post: (endpoint, data) => fetch(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Token ${getToken()}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }),
+    // ... put, delete
+};
+
+
+================================================================================
+5. API SERVICE IMPLEMENTATION ÖRNEĞİ
+================================================================================
+
+// src/services/contentService.ts
+export const contentService = {
+    getLatest: () => api.get('/content/latest/'),
+    search: (params) => api.get(`/search/?${new URLSearchParams(params)}`),
+    getById: (id) => api.get(`/content/${id}/`),
+    save: (id) => api.post('/saved/', { content_id: id }),
+    unsave: (id) => api.delete(`/saved/${id}/`),
+};
+
+// src/services/userService.ts
+export const userService = {
+    getProfile: () => api.get('/user/profile/'),
+    updateProfile: (data) => api.put('/user/profile/', data),
+    updateInterests: (interests) => api.put('/user/interests/', { interests }),
+};
+
+// src/services/authService.ts
+export const authService = {
+    login: (username, password) => 
+        api.post('/auth/login/', { username, password }),
+    register: (data) => api.post('/auth/register/', data),
+    logout: () => api.post('/auth/logout/', {}),
+};
+
+
+================================================================================
+6. ÖNCELIK SIRASI (IMPLEMENTATION)
+================================================================================
+
+Faz 1 - Authentication (Öncelikli):
+- Backend: User authentication endpoints
+- Frontend: Login/Register sayfaları
+- Frontend: Auth context/state management
+
+Faz 2 - Content Display:
+- Backend: Content API endpoints
+- Frontend: Dashboard ve Search'te API entegrasyonu
+- Frontend: ContentCard component'i real data ile
+
+Faz 3 - Save/Library:
+- Backend: Saved content endpoints
+- Frontend: Save/unsave functionality
+- Frontend: My Library view
+
+Faz 4 - Profile & Settings:
+- Backend: User profile endpoints
+- Frontend: Profile view
+- Frontend: Settings functionality
+
+Faz 5 - Chat:
+- Backend: Chat/AI endpoints (LLM integration)
+- Frontend: Chat overlay real responses
+
+
+================================================================================
+7. ÖNEMLİ NOTLAR
+================================================================================
+
+1. CORS: Backend'de CORS_ALLOWED_ORIGINS içinde frontend URL'i olmalı
+2. Authentication: Token-based (Django REST framework token)
+3. Error Handling: Tüm API calls'larda try-catch ve error states
+4. Loading States: Her API call için loading indicator
+5. Pagination: Large datasets için pagination implement et
+6. Caching: Consider React Query veya SWR for caching
+7. Environment Variables: API URL'leri .env dosyasında tut
+
+CORS Settings (Backend):
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite
+    "http://localhost:3000",  # Alternative
+]
+
+Environment Variables (Frontend):
+VITE_API_BASE_URL=http://localhost:8000/api
+
+
+================================================================================
+8. BACKEND'DE YARATILMASI GEREKEN UYGULAMALAR
+================================================================================
+
+Django Apps:
+1. authentication/ → User auth, registration
+2. content/ → Content API (ScrapedContent)
+3. saved/ → Saved content management
+4. news/ → News/announcements
+5. chat/ → AI chat integration
+6. webscraping/ → (Zaten var) Scraper management
+7. apiCallback/ → (Zaten var) Webhook management
+
+
+================================================================================
+SON
+================================================================================
+
+Bu dokümandaki tüm endpoint'ler backend'de oluşturulmalı.
+Frontend tarafında constants.ts içindeki MOCK_* veriler API çağrıları ile değiştirilmeli.
+
+Sorular için: github.com/huseyin4215/LearnExp

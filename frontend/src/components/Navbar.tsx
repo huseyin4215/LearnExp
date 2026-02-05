@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    setIsProfileOpen(false);
+    // TODO: Logout işlemleri (token silme vs.)
+    navigate('/login');
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -37,7 +44,7 @@ const Navbar: React.FC = () => {
                   <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Profile</Link>
                   <Link to="/settings" onClick={() => setIsProfileOpen(false)} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</Link>
                   <div className="border-t border-gray-100"></div>
-                  <button className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Log Out</button>
+                  <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Log Out</button>
                 </div>
               )}
             </div>

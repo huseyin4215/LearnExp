@@ -1,0 +1,984 @@
+================================================================================
+BACKEND YAPISI VE API IMPLEMENTATION REHBERI
+LearnExp - Django Backend Architecture
+================================================================================
+
+İÇİNDEKİLER
+1. Backend Dosya Yapısı (Mevcut)
+2. Django Apps Detayları
+3. Models Yapısı
+4. API Endpoints Implementation
+5. Admin Panel Konfigürasyonu
+6. Celery Tasks & Scheduling
+7. Database Schema
+8. Deployment & Configuration
+
+================================================================================
+1. BACKEND DOSYA YAPISI (MEVCUT)
+================================================================================
+
+backend/
+├── manage.py                        # Django yönetim scripti
+├── requirements.txt                 # Python dependencies
+├── db.sqlite3                       # SQLite database
+│
+├── config/                          # Ana Django ayarları
+│   ├── __init__.py                 # Celery app import (optional)
+│   ├── settings.py                 # ✅ Django settings (updated)
+│   ├── urls.py                     # Ana URL routing
+│   ├── wsgi.py                     # WSGI server config
+│   ├── asgi.py                     # ASGI server config
+│   └── celery.py                   # ✅ Celery configuration
+│
+├── webscraping/                     # ✅ Web scraping app
+│   ├── __init__.py
+│   ├── models.py                   # ✅ ScraperConfig, ScrapedContent, ScrapeLog
+│   ├── admin.py                    # ✅ Admin interfaces
+│   ├── views.py                    # API views (eklenecek)
+│   ├── tasks.py                    # ✅ Celery tasks
+│   ├── apps.py
+│   ├── tests.py
+│   ├── scrapers/                   # ✅ Scraper implementations
+│   │   ├── __init__.py
+│   │   ├── base.py                # ✅ Base scraper class
+│   │   └── arxiv_scraper.py       # ✅ arXiv implementation
+│   └── migrations/
+│
+├── apiCallback/                     # ✅ API callback handler
+│   ├── __init__.py
+│   ├── models.py                   # ✅ CallbackConfig, CallbackLog, WebhookReceiver
+│   ├── admin.py                    # ✅ Admin interfaces
+│   ├── views.py                    # Webhook receivers (eklenecek)
+│   ├── apps.py
+│   ├── tests.py
+│   └── migrations/
+│
+├── api/                            # REST API endpoints (geliştirilecek)
+│   ├── __init__.py
+│   ├── models.py                   # Ek modeller (eklenecek)
+│   ├── views.py                    # API views (eklenecek)
+│   ├── serializers.py              # ❌ DRF serializers (oluşturulacak)
+│   ├── urls.py                     # ❌ API routing (oluşturulacak)
+│   ├── permissions.py              # ❌ Custom permissions (oluşturulacak)
+│   ├── apps.py
+│   ├── tests.py
+│   └── migrations/
+│
+├── collecterService/                # Data collection service
+│   ├── __init__.py
+│   ├── models.py
+│   ├── admin.py
+│   ├── views.py
+│   ├── apps.py
+│   └── migrations/
+│
+├── apiGateway/                      # API gateway (optional)
+│   └── ... (boş)
+│
+├── NLP_ProcessingService/           # NLP processing (future)
+│   └── ... (boş)
+│
+├── llm_IntegrationService/          # LLM integration (future)
+│   └── ... (boş)
+│
+├── recommendationService/           # Recommendation engine (future)
+│   └── ... (boş)
+│
+├── logs/                           # ✅ Log dosyaları
+│   ├── .gitkeep
+│   └── django.log                  # Auto-generated
+│
+└── venv/                           # Virtual environment
+
+
+================================================================================
+2. DJANGO APPS DETAYLARI
+================================================================================
+
+--------------------------------------------------
+2.1 webscraping/ (✅ Tamamlandı)
+--------------------------------------------------
+Görev: Akademik içerik toplama ve yönetme
+
+Modeller:
+- ScraperConfig: Scraper ayarları (admin-editable)
+- ScrapedContent: Toplanan içerikler
+- ScrapeLog: Scraping logları
+
+Features:
+✅ Admin panel entegrasyonu
+✅ arXiv scraper implementation
+✅ Celery task integration
+✅ Base scraper class for extensibility
+
+Todo:
+❌ OpenAlex scraper
+❌ TÜBİTAK scraper
+❌ REST API endpoints
+
+--------------------------------------------------
+2.2 apiCallback/ (✅ Tamamlandı)
+--------------------------------------------------
+Görev: Webhook ve API callback yönetimi
+
+Modeller:
+- CallbackConfig: Callback ayarları
+- CallbackLog: Callback logları
+- WebhookReceiver: Alınan webhook'lar
+
+Features:
+✅ Admin panel entegrasyonu
+✅ Callback configuration management
+
+Todo:
+❌ Webhook receiver endpoints
+❌ Signature validation
+❌ Retry mechanism implementation
+
+--------------------------------------------------
+2.3 api/ (❌ Geliştirilecek)
+--------------------------------------------------
+Görev: Frontend için REST API sunmak
+
+Oluşturulacak Dosyalar:
+1. serializers.py - DRF serializers
+2. urls.py - API routing
+3. permissions.py - Authentication & permissions
+4. pagination.py - Custom pagination
+5. filters.py - API filters
+
+Endpoint Categories:
+- Authentication (login, register, logout)
+- User management (profile, settings)
+- Content (list, search, detail)
+- Saved content (CRUD)
+- News (list)
+- Chat (AI assistant)
+
+--------------------------------------------------
+2.4 collecterService/ (❌ Boş)
+--------------------------------------------------
+Görev: Data collection orchestration
+
+Kullanım:
+- Scraperları koordine et
+- Data validation
+- Duplicate detection
+- Content enrichment
+
+--------------------------------------------------
+2.5 NLP_ProcessingService/ (Future)
+--------------------------------------------------
+Görev: NLP işlemleri
+
+Potansiyel Features:
+- Text summarization
+- Keyword extraction
+- Content categorization
+- Similarity detection
+
+--------------------------------------------------
+2.6 llm_IntegrationService/ (Future)
+--------------------------------------------------
+Görev: LLM (ChatGPT, etc.) entegrasyonu
+
+Potansiyel Features:
+- AI chat assistant
+- Content recommendations
+- Research paper summaries
+- Query understanding
+
+--------------------------------------------------
+2.7 recommendationService/ (Future)
+--------------------------------------------------
+Görev: İçerik önerme sistemi
+
+Potansiyel Features:
+- User interest-based recommendations
+- Collaborative filtering
+- Content similarity
+- Trending content
+
+
+================================================================================
+3. MODELS YAPISI (DETAYLI)
+================================================================================
+
+--------------------------------------------------
+3.1 webscraping/models.py (✅ Mevcut)
+--------------------------------------------------
+
+class ScraperConfig(models.Model):
+    """
+    Admin panelden yönetilebilir scraper konfigürasyonları
+    """
+    name = CharField(max_length=100, unique=True)
+    source_type = CharField(choices=['arxiv', 'openalex', 'tubitak'])
+    base_url = URLField()
+    api_key = CharField(max_length=255, blank=True)
+    scrape_interval_hours = IntegerField(default=24)
+    is_active = BooleanField(default=True)
+    search_query = TextField()
+    max_results = IntegerField(default=100)
+    last_run = DateTimeField(null=True, blank=True)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+class ScrapedContent(models.Model):
+    """
+    Scrape edilmiş akademik içerik
+    """
+    scraper_config = ForeignKey(ScraperConfig)
+    external_id = CharField(max_length=255, unique=True)
+    title = CharField(max_length=500)
+    description = TextField()
+    authors = TextField()
+    source = CharField(max_length=100)
+    published_date = DateField(null=True)
+    url = URLField()
+    content_type = CharField(choices=['article', 'conference', 'funding'])
+    tags = JSONField(default=list)
+    raw_data = JSONField()
+    scraped_at = DateTimeField(auto_now_add=True)
+    # Optional fields
+    location = CharField(max_length=200, blank=True)
+    deadline = DateField(null=True)
+    amount = CharField(max_length=100, blank=True)
+
+class ScrapeLog(models.Model):
+    """
+    Scraping işlem logları
+    """
+    scraper_config = ForeignKey(ScraperConfig)
+    status = CharField(choices=['started', 'success', 'partial', 'failed'])
+    items_scraped = IntegerField(default=0)
+    items_saved = IntegerField(default=0)
+    error_message = TextField(blank=True)
+    started_at = DateTimeField(auto_now_add=True)
+    completed_at = DateTimeField(null=True)
+    duration_seconds = IntegerField(null=True)
+
+--------------------------------------------------
+3.2 apiCallback/models.py (✅ Mevcut)
+--------------------------------------------------
+
+class CallbackConfig(models.Model):
+    """
+    Webhook callback konfigürasyonları
+    """
+    name = CharField(max_length=100, unique=True)
+    endpoint_url = URLField()
+    webhook_secret = CharField(max_length=255)
+    is_active = BooleanField(default=True)
+    retry_count = IntegerField(default=3)
+    timeout_seconds = IntegerField(default=30)
+    trigger_on_new_content = BooleanField(default=True)
+    trigger_on_scrape_complete = BooleanField(default=False)
+    trigger_on_errors = BooleanField(default=False)
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+class CallbackLog(models.Model):
+    """
+    Callback denemelerinin logları
+    """
+    config = ForeignKey(CallbackConfig)
+    event_type = CharField(max_length=50)
+    request_payload = JSONField()
+    response_status = IntegerField(null=True)
+    response_body = TextField(blank=True)
+    success = BooleanField(default=False)
+    error_message = TextField(blank=True)
+    retry_attempt = IntegerField(default=0)
+    attempted_at = DateTimeField(auto_now_add=True)
+    completed_at = DateTimeField(null=True)
+
+class WebhookReceiver(models.Model):
+    """
+    Dışarıdan alınan webhook'lar
+    """
+    source = CharField(max_length=100)
+    payload = JSONField()
+    headers = JSONField()
+    validated = BooleanField(default=False)
+    processed = BooleanField(default=False)
+    processing_error = TextField(blank=True)
+    received_at = DateTimeField(auto_now_add=True)
+    processed_at = DateTimeField(null=True)
+
+--------------------------------------------------
+3.3 api/models.py (❌ Oluşturulacak)
+--------------------------------------------------
+
+class UserProfile(models.Model):
+    """
+    Kullanıcı profil bilgileri (Django User'ı extend eder)
+    """
+    user = OneToOneField(User, on_delete=CASCADE)
+    institution = CharField(max_length=200)
+    role = CharField(max_length=100)  # Researcher, Student, etc.
+    bio = TextField(blank=True)
+    interests = JSONField(default=list)  # ["AI", "ML", ...]
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+
+class SavedContent(models.Model):
+    """
+    Kullanıcıların kaydettiği içerikler
+    """
+    user = ForeignKey(User, on_delete=CASCADE)
+    content = ForeignKey('webscraping.ScrapedContent', on_delete=CASCADE)
+    saved_at = DateTimeField(auto_now_add=True)
+    notes = TextField(blank=True)  # User's personal notes
+    
+    class Meta:
+        unique_together = ('user', 'content')
+
+class News(models.Model):
+    """
+    Platform haberleri/duyuruları
+    """
+    title = CharField(max_length=500)
+    description = TextField()
+    source = CharField(max_length=100)
+    date = DateField()
+    tags = JSONField(default=list)
+    image_url = URLField(blank=True)
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(auto_now_add=True)
+
+class ChatHistory(models.Model):
+    """
+    AI chat geçmişi
+    """
+    user = ForeignKey(User, on_delete=CASCADE)
+    message = TextField()
+    response = TextField()
+    created_at = DateTimeField(auto_now_add=True)
+
+
+================================================================================
+4. API ENDPOINTS IMPLEMENTATION
+================================================================================
+
+--------------------------------------------------
+4.1 api/serializers.py (Oluşturulacak)
+--------------------------------------------------
+
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from webscraping.models import ScrapedContent
+from .models import UserProfile, SavedContent, News
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = '__all__'
+
+class ScrapedContentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScrapedContent
+        fields = '__all__'
+
+class SavedContentSerializer(serializers.ModelSerializer):
+    content = ScrapedContentSerializer(read_only=True)
+    
+    class Meta:
+        model = SavedContent
+        fields = '__all__'
+
+class NewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = News
+        fields = '__all__'
+
+--------------------------------------------------
+4.2 api/views.py (Oluşturulacak)
+--------------------------------------------------
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import authenticate, login, logout
+from .models import UserProfile, SavedContent, News
+from .serializers import *
+
+# Authentication Views
+class AuthViewSet(viewsets.ViewSet):
+    @action(detail=False, methods=['post'])
+    def login(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(username=username, password=password)
+        
+        if user:
+            # Generate or get token
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user_data': UserSerializer(user).data
+            })
+        return Response({'error': 'Invalid credentials'}, 
+                       status=status.HTTP_401_UNAUTHORIZED)
+    
+    @action(detail=False, methods=['post'])
+    def register(self, request):
+        # User registration logic
+        pass
+    
+    @action(detail=False, methods=['post'])
+    def logout(self, request):
+        request.user.auth_token.delete()
+        return Response({'success': True})
+
+# User Profile Views
+class UserProfileViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+    
+    def get_queryset(self):
+        return UserProfile.objects.filter(user=self.request.user)
+    
+    @action(detail=False, methods=['put'])
+    def update_interests(self, request):
+        profile = request.user.userprofile
+        profile.interests = request.data.get('interests', [])
+        profile.save()
+        return Response(UserProfileSerializer(profile).data)
+
+# Content Views
+class ContentViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ScrapedContentSerializer
+    queryset = ScrapedContent.objects.all()
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtering
+        content_type = self.request.query_params.get('type')
+        if content_type:
+            queryset = queryset.filter(content_type=content_type)
+        
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | 
+                Q(description__icontains=search)
+            )
+        
+        return queryset.order_by('-scraped_at')
+    
+    @action(detail=False, methods=['get'])
+    def latest(self, request):
+        limit = int(request.query_params.get('limit', 10))
+        content = self.get_queryset()[:limit]
+        serializer = self.get_serializer(content, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def recommended(self, request):
+        # Get user interests
+        interests = request.user.userprofile.interests
+        # Filter content by interests (simple version)
+        content = ScrapedContent.objects.filter(
+            tags__overlap=interests
+        )[:20]
+        serializer = self.get_serializer(content, many=True)
+        return Response(serializer.data)
+
+# Saved Content Views
+class SavedContentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SavedContentSerializer
+    
+    def get_queryset(self):
+        return SavedContent.objects.filter(user=self.request.user)
+    
+    def create(self, request):
+        content_id = request.data.get('content_id')
+        content = ScrapedContent.objects.get(id=content_id)
+        saved, created = SavedContent.objects.get_or_create(
+            user=request.user,
+            content=content
+        )
+        return Response(SavedContentSerializer(saved).data)
+    
+    def destroy(self, request, pk=None):
+        # Delete by content_id
+        SavedContent.objects.filter(
+            user=request.user,
+            content_id=pk
+        ).delete()
+        return Response({'success': True})
+
+# News Views
+class NewsViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NewsSerializer
+    queryset = News.objects.filter(is_active=True).order_by('-date')
+
+# Search Views
+class SearchViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request):
+        query = request.query_params.get('q', '')
+        content_type = request.query_params.get('type')
+        source = request.query_params.get('source')
+        
+        results = ScrapedContent.objects.all()
+        
+        if query:
+            results = results.filter(
+                Q(title__icontains=query) |
+                Q(description__icontains=query) |
+                Q(authors__icontains=query)
+            )
+        
+        if content_type:
+            results = results.filter(content_type=content_type)
+        
+        if source:
+            results = results.filter(source=source)
+        
+        # Pagination
+        from rest_framework.pagination import PageNumberPagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        page = paginator.paginate_queryset(results, request)
+        
+        serializer = ScrapedContentSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+# Chat Views
+class ChatViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    
+    def create(self, request):
+        message = request.data.get('message')
+        
+        # TODO: Integrate with LLM service
+        # For now, simple response
+        reply = f"I received your message: {message}"
+        
+        # Save to history
+        ChatHistory.objects.create(
+            user=request.user,
+            message=message,
+            response=reply
+        )
+        
+        return Response({
+            'reply': reply,
+            'suggested_content': []
+        })
+
+--------------------------------------------------
+4.3 api/urls.py (Oluşturulacak)
+--------------------------------------------------
+
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import *
+
+router = DefaultRouter()
+router.register('content', ContentViewSet, basename='content')
+router.register('saved', SavedContentViewSet, basename='saved')
+router.register('news', NewsViewSet, basename='news')
+router.register('search', SearchViewSet, basename='search')
+router.register('auth', AuthViewSet, basename='auth')
+router.register('user', UserProfileViewSet, basename='user')
+router.register('chat', ChatViewSet, basename='chat')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+
+--------------------------------------------------
+4.4 config/urls.py (Güncellenecek)
+--------------------------------------------------
+
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include('api.urls')),  # ← Eklenecek
+]
+
+
+================================================================================
+5. ADMIN PANEL KONFIGÜRASYONU
+================================================================================
+
+Admin Panel URL: http://127.0.0.1:8000/admin/
+
+--------------------------------------------------
+Mevcut Admin Sections:
+--------------------------------------------------
+
+Web Scraping:
+- Scraper Configurations
+  → Add/Edit scraper settings
+  → Activate/Deactivate scrapers
+  → View last run times
+
+- Scraped Contents
+  → View collected content
+  → Filter by type, source, date
+  → Search functionality
+
+- Scrape Logs
+  → View scraping history
+  → Monitor success/failures
+  → Error debugging
+
+Api Callback:
+- Callback Configurations
+  → Add/Edit webhook endpoints
+  → Configure retry policies
+  → Event triggers
+
+- Callback Logs
+  → Monitor callback attempts
+  → Success/failure tracking
+
+- Webhook Receivers
+  → Incoming webhooks
+  → Validation status
+
+--------------------------------------------------
+Eklenecek Admin Sections:
+--------------------------------------------------
+
+Users & Profiles:
+- User Profiles
+  → Manage user profiles
+  → Edit interests
+  → View user activity
+
+Content Management:
+- Saved Content
+  → View user saved items
+  → Manage saves
+
+- News
+  → Add/Edit news items
+  → Activate/Deactivate news
+
+
+================================================================================
+6. CELERY TASKS & SCHEDULING
+================================================================================
+
+--------------------------------------------------
+6.1 Mevcut Tasks (webscraping/tasks.py)
+--------------------------------------------------
+
+@shared_task
+def run_scraper(scraper_config_id):
+    """Tek bir scraper'ı çalıştır"""
+    # Implementation exists
+
+@shared_task
+def run_all_active_scrapers():
+    """Tüm aktif scraper'ları çalıştır"""
+    # Implementation exists
+
+--------------------------------------------------
+6.2 Eklenecek Tasks
+--------------------------------------------------
+
+@shared_task
+def send_callback(callback_config_id, event_type, payload):
+    """Webhook callback gönder"""
+    pass
+
+@shared_task
+def cleanup_old_logs():
+    """Eski logları temizle (30 gün+)"""
+    pass
+
+@shared_task
+def generate_recommendations(user_id):
+    """Kullanıcı için öneriler oluştur"""
+    pass
+
+--------------------------------------------------
+6.3 Periodic Tasks (Celery Beat)
+--------------------------------------------------
+
+# config/celery.py içine eklenecek
+from celery.schedules import crontab
+
+app.conf.beat_schedule = {
+    'run-scrapers-every-hour': {
+        'task': 'webscraping.tasks.run_all_active_scrapers',
+        'schedule': crontab(minute=0, hour='*/1'),  # Her saat başı
+    },
+    'cleanup-logs-daily': {
+        'task': 'api.tasks.cleanup_old_logs',
+        'schedule': crontab(hour=2, minute=0),  # Her gün saat 2'de
+    },
+}
+
+
+================================================================================
+7. DATABASE SCHEMA
+================================================================================
+
+Tables:
+- auth_user (Django default)
+- api_userprofile
+- api_savedcontent
+- api_news
+- api_chathistory
+- webscraping_scraperconfig
+- webscraping_scrapedcontent
+- webscraping_scrapelog
+- apicallback_callbackconfig
+- apicallback_callbacklog
+- apicallback_webhookreceiver
+
+Relationships:
+- UserProfile → User (1-to-1)
+- SavedContent → User (Many-to-1)
+- SavedContent → ScrapedContent (Many-to-1)
+- ScrapedContent → ScraperConfig (Many-to-1)
+- ScrapeLog → ScraperConfig (Many-to-1)
+- CallbackLog → CallbackConfig (Many-to-1)
+
+
+================================================================================
+8. DEPLOYMENT & CONFIGURATION
+================================================================================
+
+--------------------------------------------------
+8.1 Environment Variables (.env)
+--------------------------------------------------
+
+# Django
+SECRET_KEY=your-secret-key-here
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,yourdomain.com
+
+# Database (Production - PostgreSQL)
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=learnexp_db
+DB_USER=learnexp_user
+DB_PASSWORD=secure_password
+DB_HOST=localhost
+DB_PORT=5432
+
+# Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# APIs
+ARXIV_API_URL=http://export.arxiv.org/api/query
+OPENALEX_API_KEY=your-key-here
+
+# LLM Integration (Future)
+OPENAI_API_KEY=your-key-here
+
+--------------------------------------------------
+8.2 Production Requirements
+--------------------------------------------------
+
+# requirements-prod.txt
+Django==5.0
+djangorestframework==3.14.0
+psycopg2-binary==2.9.9  # PostgreSQL
+gunicorn==21.2.0
+celery==5.3.4
+redis==5.0.1
+beautifulsoup4==4.12.2
+requests==2.31.0
+lxml==4.9.3
+python-dotenv==1.0.0
+django-cors-headers==4.3.1
+whitenoise==6.6.0  # Static files
+
+--------------------------------------------------
+8.3 Deployment Steps
+--------------------------------------------------
+
+1. Setup PostgreSQL database
+2. Configure environment variables
+3. Install dependencies: pip install -r requirements-prod.txt
+4. Run migrations: python manage.py migrate
+5. Collect static files: python manage.py collectstatic
+6. Create superuser: python manage.py createsuperuser
+7. Start Gunicorn: gunicorn config.wsgi:application
+8. Start Celery worker: celery -A config worker
+9. Start Celery beat: celery -A config beat
+10. Setup Nginx reverse proxy
+
+
+================================================================================
+9. DEVELOPMENT WORKFLOW
+================================================================================
+
+1. Create new Django app:
+   python manage.py startapp app_name
+
+2. Add to INSTALLED_APPS in settings.py
+
+3. Create models.py
+
+4. Create migrations:
+   python manage.py makemigrations
+
+5. Apply migrations:
+   python manage.py migrate
+
+6. Create admin.py for admin panel
+
+7. Create serializers.py for DRF
+
+8. Create views.py for API endpoints
+
+9. Create urls.py for routing
+
+10. Include in main urls.py
+
+11. Test endpoints
+
+
+================================================================================
+10. TESTING
+================================================================================
+
+# Run all tests
+python manage.py test
+
+# Test specific app
+python manage.py test api
+
+# Create test file: api/tests.py
+from rest_framework.test import APITestCase
+
+class ContentAPITest(APITestCase):
+    def test_get_content(self):
+        response = self.client.get('/api/content/')
+        self.assertEqual(response.status_code, 200)
+
+
+================================================================================
+11. API DOCUMENTATION
+================================================================================
+
+Swagger/OpenAPI documentation eklenebilir:
+
+pip install drf-yasg
+
+# config/urls.py
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="LearnExp API",
+      default_version='v1',
+   ),
+   public=True,
+   permission_classes=[permissions.AllowAny],
+)
+
+urlpatterns = [
+    path('swagger/', schema_view.with_ui('swagger')),
+    path('redoc/', schema_view.with_ui('redoc')),
+]
+
+
+================================================================================
+12. SECURITY BEST PRACTICES
+================================================================================
+
+1. Never commit SECRET_KEY
+2. Use environment variables for sensitive data
+3. Enable HTTPS in production
+4. Implement rate limiting
+5. Validate all user inputs
+6. Use CSRF protection
+7. Sanitize database queries
+8. Implement proper authentication
+9. Log security events
+10. Regular dependency updates
+
+
+================================================================================
+13. MONITORING & LOGGING
+================================================================================
+
+Logging Levels:
+- DEBUG: Development bilgileri
+- INFO: Normal operasyonlar
+- WARNING: Dikkat gerektiren durumlar
+- ERROR: Hatalar
+- CRITICAL: Kritik hatalar
+
+Log Locations:
+- Console output
+- logs/django.log
+- Celery logs
+- Database query logs (optional)
+
+
+================================================================================
+14. NEXT STEPS
+================================================================================
+
+Priority 1 (Critical):
+1. ✅ pip install -r requirements.txt
+2. ✅ python manage.py makemigrations
+3. ✅ python manage.py migrate
+4. ✅ python manage.py createsuperuser
+5. ❌ Create api/serializers.py
+6. ❌ Create api/views.py
+7. ❌ Create api/urls.py
+8. ❌ Update config/urls.py
+9. ❌ Create api/models.py (UserProfile, SavedContent, News)
+10. ❌ Test endpoints
+
+Priority 2 (Important):
+- Implement authentication endpoints
+- Test scraper functionality
+- Create frontend API integration
+- Setup Celery periodic tasks
+
+Priority 3 (Future):
+- Implement LLM integration
+- Add recommendation engine
+- Deploy to production
+- Setup monitoring
+
+
+================================================================================
+SON
+================================================================================
+
+Backend yapısı kapsamlı ve modüler tasarlanmış.
+Webscraping ve callback yapıları hazır.
+API endpoints implementation öncelikli iş.
+
+Terminal Commands Özeti:
+cd C:\Users\rukiye\Desktop\LearnExp\backend
+venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+
+Admin Panel: http://127.0.0.1:8000/admin/
+API Base: http://127.0.0.1:8000/api/ (oluşturulacak)

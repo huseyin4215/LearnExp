@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatOverlay from './components/ChatOverlay';
 import Dashboard from './views/Dashboard';
@@ -7,8 +7,23 @@ import SearchDashboard from './views/SearchDashboard';
 import MyLibrary from './views/MyLibrary';
 import Profile from './views/Profile';
 import Settings from './views/Settings';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 const App: React.FC = () => {
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+  // Auth sayfalarında farklı layout kullan
+  if (isAuthPage) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />

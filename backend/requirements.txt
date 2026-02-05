@@ -1,0 +1,9 @@
+Django==5.0
+djangorestframework==3.14.0
+celery==5.3.4
+redis==5.0.1
+beautifulsoup4==4.12.2
+requests==2.31.0
+lxml==6.0.2
+python-dotenv==1.0.0
+django-cors-headers==4.3.1
