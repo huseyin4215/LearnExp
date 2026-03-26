@@ -13,9 +13,16 @@ export interface AcademicContent {
     source: string;
     date: string;
     tags: string[];
+    keywords?: string[];
     deadline?: string;
     location?: string;
     amount?: string;
+    url?: string;
+    authors?: string;
+    journal?: string;
+    citations?: number;
+    pdfUrl?: string;
+    imageUrl?: string;
 }
 
 // User Interface

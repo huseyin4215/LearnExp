@@ -15,6 +15,7 @@ class ScraperConfig(models.Model):
         ('google_scholar', 'Google Scholar'),
         ('researchgate', 'ResearchGate'),
         ('academia', 'Academia.edu'),
+        ('wikicfp', 'WikiCFP'),
         ('custom', 'Özel Kaynak'),
     ]
     
@@ -22,12 +23,23 @@ class ScraperConfig(models.Model):
         ('api', 'API Tabanlı'),
         ('html', 'HTML Parsing'),
         ('selenium', 'Selenium (JavaScript)'),
+        ('playwright', 'Playwright (Chrome/WebKit)'),
         ('rss', 'RSS Feed'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('magazine', 'Magazin'),
+        ('article', 'Makale'),
+        ('architecture', 'Mimari'),
+        ('news', 'Haber Sitesi'),
+        ('academic', 'Akademik'),
+        ('other', 'Diğer'),
     ]
     
     name = models.CharField(max_length=100, unique=True, help_text="Scraper için benzersiz isim")
     source_type = models.CharField(max_length=50, choices=SOURCE_CHOICES, help_text="Kaynak türü")
     scraper_type = models.CharField(max_length=20, choices=SCRAPER_TYPE_CHOICES, default='html', help_text="Scraping yöntemi")
+    content_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='news', help_text="İçerik Kategorisi")
     
     # URL ve bağlantı ayarları
     base_url = models.URLField(help_text="Temel URL")
@@ -36,7 +48,7 @@ class ScraperConfig(models.Model):
     password = models.CharField(max_length=255, blank=True, help_text="Giriş şifresi")
     
     # Arama ve filtreleme
-    search_query = models.TextField(help_text="Arama sorgusu/anahtar kelimeler")
+    search_query = models.TextField(blank=True, default="", help_text="Arama sorgusu/anahtar kelimeler")
     categories = models.TextField(blank=True, help_text="Kategoriler (virgülle ayrılmış)")
     date_filter_start = models.DateField(null=True, blank=True, help_text="Başlangıç tarihi filtresi")
     date_filter_end = models.DateField(null=True, blank=True, help_text="Bitiş tarihi filtresi")
@@ -45,8 +57,72 @@ class ScraperConfig(models.Model):
     max_results = models.IntegerField(default=100, help_text="Maksimum sonuç sayısı")
     max_pages = models.IntegerField(default=10, help_text="Maksimum sayfa sayısı")
     delay_between_requests = models.FloatField(default=2.0, help_text="İstekler arası bekleme (saniye)")
+    delay_between_pages = models.FloatField(default=3.0, help_text="Sayfalar arası bekleme (saniye)")
     timeout_seconds = models.IntegerField(default=30, help_text="İstek timeout süresi")
-    
+
+    # Sayfalama (Pagination)
+    PAGINATION_TYPE_CHOICES = [
+        ('none', 'Sayfalama Yok'),
+        ('next_button', 'Sonraki Buton/Link'),
+        ('page_numbers', 'Sayfa Numaraları'),
+        ('url_pattern', 'URL Şablonu ({page} içinde)'),
+        ('url_increment', 'URL Increment — Sayfa No Path İçinde'),
+    ]
+    pagination_type = models.CharField(
+        max_length=20,
+        choices=PAGINATION_TYPE_CHOICES,
+        default='none',
+        help_text="Sayfalama stratejisi"
+    )
+    pagination_template = models.CharField(
+        max_length=1000,
+        blank=True,
+        help_text=(
+            "[URL_INCREMENT] {page} placeholder içeren tam URL şablonu. "
+            "Örnek: https://www.ankara.edu.tr/kategori/haberler/{page}  "
+            "Temel URL çalışmadığında kullanın (sayfa numarasız URL mevcut değilse)."
+        )
+    )
+    pagination_url_pattern = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="[url_pattern] {page} placeholder içeren URL. Örnek: https://site.com/sayfa/{page}"
+    )
+    max_results_per_request = models.IntegerField(
+        default=100,
+        help_text="İstek başına maksimum sonuç"
+    )
+    use_sibling_payload = models.BooleanField(
+        default=False,
+        help_text="Öğeleri ardışık iki satır (row) olarak işle (WikiCFP gibi yapılar için)"
+    )
+    pagination_start_page = models.IntegerField(
+        default=1,
+        help_text="Başlangıç sayfa numarası (genellikle 1)"
+    )
+    stop_when_empty = models.BooleanField(
+        default=True,
+        help_text="Sayfada hiç öğe bulunamazsa otomatik dur. URL_INCREMENT için önerilir."
+    )
+
+    # Auth
+    requires_login = models.BooleanField(default=False, help_text="Giriş gerekiyor mu?")
+    login_username_field = models.CharField(max_length=100, blank=True, default='username')
+    login_password_field = models.CharField(max_length=100, blank=True, default='password')
+    verify_ssl = models.BooleanField(default=True, help_text="SSL sertifikalarını doğrula")
+    cookies = models.JSONField(default=dict, blank=True, help_text="Özel çerezler")
+    selector_type = models.CharField(
+        max_length=10,
+        choices=[('css', 'CSS'), ('xpath', 'XPath'), ('mixed', 'Mixed')],
+        default='css',
+        help_text="Seçici türü"
+    )
+    date_format = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Tarih formatı (Python strftime). Boş bırakılırsa otomatik algılanır."
+    )
+
     # User-Agent ve headers
     user_agent = models.TextField(
         default='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -62,6 +138,38 @@ class ScraperConfig(models.Model):
     is_active = models.BooleanField(default=True, help_text="Aktif/Pasif")
     last_run = models.DateTimeField(null=True, blank=True, help_text="Son çalışma zamanı")
     next_run = models.DateTimeField(null=True, blank=True, help_text="Sonraki planlanan çalışma")
+    
+    # Advanced Crawling (Multi-Stage)
+    enable_multi_step = models.BooleanField(
+        default=False, 
+        help_text="Çok aşamalı taramayı aktif et (örn: Önce linkleri topla, sonra her linke git)"
+    )
+    enable_query_encoding = models.BooleanField(
+        default=False, 
+        help_text="Arama terimlerini URL formatına dönüştür (quote)"
+    )
+    enable_relative_url_fix = models.BooleanField(
+        default=True, 
+        help_text="Göreceli linkleri tam URL'e dönüştür (urljoin)"
+    )
+    step1_selectors = models.JSONField(
+        default=dict, 
+        blank=True, 
+        help_text="Aşama 1: Linkleri keşfetmek için kullanılacak seçiciler"
+    )
+    step2_selectors = models.JSONField(
+        default=dict, 
+        blank=True, 
+        help_text="Aşama 2: Detay sayfasından veri çekmek için kullanılacak seçiciler"
+    )
+    max_depth = models.IntegerField(
+        default=2, 
+        help_text="Tarama derinliği (Multi-step için)"
+    )
+    max_pages_per_step = models.IntegerField(
+        default=10, 
+        help_text="Aşama başına maksimum sayfa limiti"
+    )
     
     # İstatistikler
     total_items_scraped = models.IntegerField(default=0)
@@ -195,7 +303,8 @@ class ScrapedContent(models.Model):
     language = models.CharField(max_length=10, default='en', help_text="Dil kodu")
     
     # Dosyalar
-    pdf_url = models.URLField(blank=True)
+    pdf_url = models.URLField(blank=True, max_length=1000)
+    image_url = models.URLField(blank=True, max_length=1000, help_text="Resim URL")
     has_full_text = models.BooleanField(default=False)
     
     # Özel alanlar (konferans, fon vb. için)

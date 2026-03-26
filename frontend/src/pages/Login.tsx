@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { authApi, userStorage } from '../services/api';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { authApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +11,9 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const auth = useAuth();
+  const from = (location.state as any)?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,10 +22,15 @@ const Login: React.FC = () => {
 
     try {
       const response = await authApi.login({ email, password });
-      
+
       if (response.success && response.user) {
-        userStorage.setUser(response.user);
-        navigate('/');
+        auth.login(response.user);
+        // Profil tamamlanmamışsa profil sayfasına yönlendir
+        if (!response.user.isProfileComplete) {
+          navigate('/complete-profile');
+        } else {
+          navigate(from, { replace: true });
+        }
       } else {
         setError(response.message || 'Giriş başarısız.');
       }
@@ -42,7 +51,7 @@ const Login: React.FC = () => {
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-300 rounded-full blur-3xl" />
         </div>
-        
+
         {/* Floating Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-white/30 rounded-full animate-pulse" />
@@ -61,7 +70,7 @@ const Login: React.FC = () => {
           <p className="text-xl text-white/80 text-center max-w-md leading-relaxed">
             Akademik keşfin akıllı yolu. Araştırmalarınızı güçlendirin.
           </p>
-          
+
           <div className="mt-16 grid grid-cols-3 gap-8 text-center">
             <div>
               <div className="text-3xl font-bold">10K+</div>

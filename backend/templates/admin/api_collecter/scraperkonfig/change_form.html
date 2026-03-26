@@ -1,0 +1,232 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<style>
+    .smart-panel {
+        background: #fdfdfd;
+        border: 2px solid #e0e7ff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .smart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+    .smart-title h2 { color: #1e1b4b; font-weight: 800; margin: 0; }
+    .smart-title p { color: #6366f1; font-weight: 500; margin: 4px 0 0 0; font-size: 13px; }
+    
+    .smart-controls {
+        background: #f1f5f9;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .url-input-container { display: flex; gap: 10px; align-items: center; }
+    .url-input-container input { 
+        flex: 1; 
+        padding: 10px; 
+        border: 1px solid #cbd5e1; 
+        border-radius: 6px; 
+    }
+    
+    .actions { display: flex; gap: 10px; }
+    .btn-smart {
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-auto { background: #6366f1; color: white; }
+    .btn-test { background: #0ea5e9; color: white; }
+    .btn-auto:hover { background: #4f46e5; transform: translateY(-1px); }
+    .btn-test:hover { background: #0284c7; transform: translateY(-1px); }
+    
+    #preview-area {
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 2px dashed #e2e8f0;
+        display: none;
+    }
+    .preview-header { font-weight: 800; color: #334155; margin-bottom: 15px; display: flex; justify-content: space-between; }
+    
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+    .preview-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: 0.3s;
+    }
+    .preview-card:hover { border-color: #6366f1; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    .preview-img { width: 100%; height: 140px; object-fit: cover; background: #f8fafc; }
+    .preview-info { padding: 12px; }
+    .preview-title { font-weight: 700; font-size: 14px; color: #1e293b; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .preview-link { font-size: 11px; color: #6366f1; text-decoration: none; word-break: break-all; }
+    
+    .loader-container { display: flex; align-items: center; gap: 10px; font-weight: 600; color: #475569; }
+    .loader {
+        border: 3px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 3px solid #6366f1;
+        width: 18px;
+        height: 18px;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
+<script>
+    (function($) {
+        $(document).ready(function() {
+            const objectId = "{{ object_id }}";
+            const csrfToken = $("input[name=csrfmiddlewaretoken]").val();
+            
+            function renderResults(data, label) {
+                $('#preview-area').css('display', 'block');
+                let html = `
+                    <div class="preview-header">
+                        <span>🔍 ${label}: Found ${data.total_found || data.items.length} items</span>
+                        <span style="font-size:12px; font-weight:400; color:#64748b;">Duration: ${data.duration ? data.duration.toFixed(1) + 's' : 'N/A'}</span>
+                    </div>
+                    <div class="preview-grid">`;
+                
+                data.items.forEach(item => {
+                    html += `
+                        <div class="preview-card">
+                            <img src="${item.image_url || ''}" class="preview-img" onerror="this.src='https://via.placeholder.com/250x140?text=No+Preview'">
+                            <div class="preview-info">
+                                <div class="preview-title" title="${item.title}">${item.title}</div>
+                                <a href="${item.source_url}" target="_blank" class="preview-link">${item.source_url.substring(0, 60)}${item.source_url.length > 60 ? '...' : ''}</a>
+                            </div>
+                        </div>`;
+                });
+                
+                html += `</div>`;
+                if (data.debug) {
+                    html += `<div style="margin-top:15px; font-size:11px; color:#94a3b8;">
+                        Debug: Containers Found: ${data.debug.containers_found} | Items Detected: ${data.debug.items_detected}
+                    </div>`;
+                }
+                $('#preview-results').html(html);
+            }
+
+            // 1. Auto Detect Logic
+            $('#btn-auto-config').click(function(e) {
+                e.preventDefault();
+                const url = $('#smart-url-input').val() || $('#id_base_url').val();
+                if (!url) {
+                    alert("Please enter a Target URL!");
+                    $('#smart-url-input').focus();
+                    return;
+                }
+                
+                const $btn = $(this);
+                const $loader = $('#smart-loader');
+                
+                $btn.prop('disabled', true).css('opacity', 0.5);
+                $loader.show();
+                
+                $.ajax({
+                    url: '../auto-config/',
+                    type: 'POST',
+                    data: {
+                        'url': url,
+                        'csrfmiddlewaretoken': csrfToken
+                    },
+                    success: function(data) {
+                        $btn.prop('disabled', false).css('opacity', 1);
+                        $loader.hide();
+                        
+                        if (data.success) {
+                            $('#id_selectors').val(JSON.stringify(data.selectors, null, 2));
+                            if (data.pagination) $('#id_pagination_url_pattern').val(data.pagination);
+                            if ($('#id_base_url').val() === "") $('#id_base_url').val(url);
+                            
+                            renderResults(data, "Auto-Detect Success");
+                        } else {
+                            alert("Auto-config failed: " + data.error);
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).css('opacity', 1);
+                        $loader.hide();
+                        alert("Network error during auto-detection.");
+                    }
+                });
+            });
+
+            // 2. Test Run Logic
+            $('#btn-test-scrape').click(function(e) {
+                e.preventDefault();
+                if (!objectId || objectId === "None") {
+                    alert("Please save the configuration before running a test!");
+                    return;
+                }
+                
+                const $btn = $(this);
+                const $loader = $('#smart-loader');
+                
+                $btn.prop('disabled', true).css('opacity', 0.5);
+                $loader.show();
+                
+                $.getJSON(`test-scrape/`, function(data) {
+                    $btn.prop('disabled', false).css('opacity', 1);
+                    $loader.hide();
+                    
+                    if (data.success) {
+                        renderResults(data, "Test Scrape Results");
+                    } else {
+                        alert("Scraping failed: " + data.error);
+                    }
+                });
+            });
+        });
+    })(django.jQuery || jQuery);
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="smart-panel">
+        <div class="smart-header">
+            <div class="smart-title">
+                <h2>✨ Intelligent Scraping Assistant</h2>
+                <p>AI-powered selector discovery and instant verification.</p>
+            </div>
+            <div id="smart-loader" class="loader-container" style="display:none;">
+                <div class="loader"></div>
+                <span>Analyzing page...</span>
+            </div>
+        </div>
+        
+        <div class="smart-controls">
+            <div class="url-input-container">
+                <input type="text" id="smart-url-input" placeholder="Paste URL to discover selectors (e.g. https://site.com/news)">
+                <div class="actions">
+                    <button id="btn-auto-config" class="btn-smart btn-auto" title="Automatically detect selectors for this URL">🚀 Auto Detect</button>
+                    <button id="btn-test-scrape" class="btn-smart btn-test" title="Run a non-persistent test of current selectors">🧪 Test Current</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="preview-area">
+            <div id="preview-results"></div>
+        </div>
+    </div>
+    
+    {{ block.super }}
+</div>
+{% endblock %}

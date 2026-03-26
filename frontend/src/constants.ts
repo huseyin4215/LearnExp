@@ -1,4 +1,4 @@
-import type { User, AcademicContent, NewsItem } from './types';
+import type { User, AcademicContent } from './types';
 
 // Mock User Data
 export const MOCK_USER: User = {
@@ -19,6 +19,7 @@ export const MOCK_CONTENT: AcademicContent[] = [
         source: 'arXiv',
         date: 'Dec 15, 2024',
         tags: ['NLP', 'Transformers', 'Low-Resource'],
+        url: 'https://arxiv.org/abs/1706.03762',
     },
     {
         id: 'c2',
@@ -30,41 +31,5 @@ export const MOCK_CONTENT: AcademicContent[] = [
         location: 'Vienna, Austria',
         deadline: 'Feb 01, 2024',
         tags: ['Machine Learning', 'Deep Learning', 'AI'],
-    },
-];
-
-// News Items
-export const NEWS_ITEMS: NewsItem[] = [
-    {
-        id: 'n1',
-        title: 'OpenAI Releases GPT-5: Next Generation Language Model',
-        description: 'Revolutionary breakthrough in natural language understanding with 10x improvement in reasoning capabilities.',
-        source: 'OpenAI Blog',
-        date: 'Dec 20, 2024',
-        tags: ['AI', 'NLP', 'GPT'],
-    },
-    {
-        id: 'n2',
-        title: 'European Research Council Announces €2B Funding Initiative',
-        description: 'New funding program targeting AI ethics, sustainability, and healthcare applications across EU member states.',
-        source: 'ERC News',
-        date: 'Dec 18, 2024',
-        tags: ['Funding', 'Research', 'Europe'],
-    },
-    {
-        id: 'n3',
-        title: 'TÜBİTAK 1001 Program: 2025 Application Period Opens',
-        description: 'Turkish scientific research support program now accepting applications for fundamental research projects.',
-        source: 'TÜBİTAK',
-        date: 'Dec 10, 2024',
-        tags: ['Turkey', 'Funding', 'Research'],
-    },
-    {
-        id: 'n4',
-        title: 'NeurIPS 2024 Best Paper Award: Quantum Machine Learning',
-        description: 'Groundbreaking work on quantum algorithms for machine learning wins prestigious award.',
-        source: 'NeurIPS',
-        date: 'Dec 12, 2024',
-        tags: ['Quantum', 'ML', 'Awards'],
     },
 ];

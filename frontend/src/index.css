@@ -2,9 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== Light Mode ===== */
+html,
+body {
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+/* ===== Dark Mode ===== */
+
+/* Page-level: html and body background */
+html.dark {
+  background-color: #111827;
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827;
+  color: #e5e7eb;
+}
+
+@layer utilities {
+
+  /* Page background override */
+  .dark .bg-gray-50 {
+    background-color: #111827 !important;
+  }
+
+  /* Cards, panels, modals */
+  .dark .bg-white {
+    background-color: #1f2937 !important;
+  }
+
+  .dark .bg-gray-100 {
+    background-color: #1f2937 !important;
+  }
+
+  /* Borders */
+  .dark .border-gray-200,
+  .dark .border-gray-100 {
+    border-color: #374151 !important;
+  }
+
+  /* Text overrides */
+  .dark .text-gray-900 {
+    color: #f9fafb;
+  }
+
+  .dark .text-gray-800 {
+    color: #f3f4f6;
+  }
+
+  .dark .text-gray-700 {
+    color: #d1d5db;
+  }
+
+  .dark .text-gray-600 {
+    color: #9ca3af;
+  }
+
+  .dark .text-gray-500 {
+    color: #9ca3af;
+  }
+
+  .dark .text-gray-400 {
+    color: #6b7280;
+  }
+
+  /* Hover overrides */
+  .dark .hover\:bg-gray-50:hover,
+  .dark .hover\:bg-gray-100:hover {
+    background-color: #374151 !important;
+  }
+
+  /* Stat cards (colored backgrounds) */
+  .dark .bg-indigo-50 {
+    background-color: rgba(79, 70, 229, 0.15) !important;
+  }
+
+  .dark .bg-purple-50 {
+    background-color: rgba(139, 92, 246, 0.15) !important;
+  }
+
+  .dark .bg-emerald-50 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+  }
+
+  .dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+  }
+
+  .dark .bg-indigo-100 {
+    background-color: rgba(79, 70, 229, 0.2) !important;
+  }
+
+  .dark .bg-blue-100 {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+  }
+
+  .dark .bg-green-100 {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+  }
+}
+
+/* Search input: stay white-ish, readable in dark mode */
+html.dark input[type="text"],
+html.dark input[type="search"],
+html.dark textarea {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f3f4f6 !important;
+}
+
+html.dark input[type="text"]::placeholder,
+html.dark input[type="search"]::placeholder,
+html.dark textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Selects in dark mode */
+html.dark select {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #e5e7eb !important;
+}
+
+/* Checkboxes */
+html.dark input[type="checkbox"] {
+  background-color: #374151;
+  border-color: #6b7280;
+}
+
+/* Dropdown menus */
+html.dark .animate-fadeIn {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+/* ===== End Dark Mode ===== */
+
 /* Custom gradient background */
 .gradient-bg {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.dark .gradient-bg {
+  background: linear-gradient(135deg, #4338ca 0%, #5b21b6 100%);
 }
 
 /* Serif font for titles */

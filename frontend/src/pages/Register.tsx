@@ -58,11 +58,13 @@ const Register: React.FC = () => {
         password: formData.password,
       });
 
-      if (response.success) {
-        setSuccess('Hesap başarıyla oluşturuldu! Giriş sayfasına yönlendiriliyorsunuz...');
+      if (response.success && response.user) {
+        // Kullanıcıyı kaydet
+        userStorage.setUser(response.user);
+        setSuccess('Hesap başarıyla oluşturuldu! Profilinizi tamamlayın...');
         setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+          navigate('/complete-profile');
+        }, 1500);
       } else {
         setError(response.message || 'Kayıt başarısız.');
       }
