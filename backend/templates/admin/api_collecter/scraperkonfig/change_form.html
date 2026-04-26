@@ -73,7 +73,7 @@
     .preview-card:hover { border-color: #6366f1; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     .preview-img { width: 100%; height: 140px; object-fit: cover; background: #f8fafc; }
     .preview-info { padding: 12px; }
-    .preview-title { font-weight: 700; font-size: 14px; color: #1e293b; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .preview-title { font-weight: 700; font-size: 14px; color: #1e293b; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .preview-link { font-size: 11px; color: #6366f1; text-decoration: none; word-break: break-all; }
     
     .loader-container { display: flex; align-items: center; gap: 10px; font-weight: 600; color: #475569; }
@@ -151,9 +151,39 @@
                         $loader.hide();
                         
                         if (data.success) {
-                            $('#id_selectors').val(JSON.stringify(data.selectors, null, 2));
-                            if (data.pagination) $('#id_pagination_url_pattern').val(data.pagination);
+                            const config = data.config;
+                            
+                            // Define IDs based on new fields
+                            $('#id_selectors').val(JSON.stringify(config.selectors, null, 2));
+                            $('#id_scraper_type').val(config.scraper_type);
+                            
+                            if (config.pagination) {
+                                if (config.pagination.type === 'QUERY_PARAM' || config.pagination.type === 'URL_INCREMENT') {
+                                    $('#id_pagination_type').val(config.pagination.type.toLowerCase());
+                                    $('#id_pagination_url_pattern').val(config.pagination.template);
+                                } else if (config.pagination.type === 'NEXT_BUTTON') {
+                                    $('#id_pagination_type').val('next_button');
+                                    // Custom logic for next button selector if needed
+                                }
+                            }
+                            
+                            if (config.advanced) {
+                                $('#id_enable_multi_step').prop('checked', config.advanced.enable_multi_step);
+                                $('#id_enable_relative_url_fix').prop('checked', config.advanced.enable_relative_url_fix);
+                                
+                                if (config.advanced.enable_multi_step) {
+                                    $('#id_step1_selectors').val(JSON.stringify(config.step1_selectors, null, 2));
+                                    $('#id_step2_selectors').val(JSON.stringify(config.step2_selectors, null, 2));
+                                }
+                            }
+                            
                             if ($('#id_base_url').val() === "") $('#id_base_url').val(url);
+                            
+                            // Show explanation
+                            const explainHtml = `<div style="margin-bottom:15px; padding:12px; background:#eef2ff; border-left:4px solid #6366f1; border-radius:4px; font-size:13px; color:#3730a3;">
+                                <strong>Architect Strategy:</strong> ${data.strategy_explanation}
+                            </div>`;
+                            $('#preview-results').prepend(explainHtml);
                             
                             renderResults(data, "Auto-Detect Success");
                         } else {
@@ -193,6 +223,25 @@
                     }
                 });
             });
+
+            // 3. Dynamic UI logic for Infinite Scroll
+            function toggleInfiniteScroll() {
+                const isActive = $('#id_enable_infinite_scroll').is(':checked');
+                // Target the entire form-row for these fields
+                const $scrollCountRow = $('.field-scroll_count');
+                const $scrollDelayRow = $('.field-scroll_delay');
+                
+                if (isActive) {
+                    $scrollCountRow.show();
+                    $scrollDelayRow.show();
+                } else {
+                    $scrollCountRow.hide();
+                    $scrollDelayRow.hide();
+                }
+            }
+            
+            $('#id_enable_infinite_scroll').change(toggleInfiniteScroll);
+            toggleInfiniteScroll(); // Run once on load
         });
     })(django.jQuery || jQuery);
 </script>

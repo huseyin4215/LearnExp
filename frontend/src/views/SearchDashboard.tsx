@@ -1,104 +1,155 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import ContentCard from '../components/ContentCard';
-import { articlesApi, scrapersApi } from '../services/api';
+import { activityApi, articlesApi, libraryApi, scrapersApi, userStorage } from '../services/api';
 import type { Article, APISource } from '../services/api';
-
-interface FilterSectionProps {
-  title: string;
-  options: string[];
-  selectedOptions: string[];
-  onToggle: (option: string) => void;
-}
-
-const FilterSection: React.FC<FilterSectionProps> = ({ title, options, selectedOptions, onToggle }) => (
-  <div className="mb-6">
-    <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-tighter">{title}</h4>
-    <div className="space-y-1">
-      {options.map(opt => (
-        <label key={opt} className="flex items-center cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={selectedOptions.includes(opt)}
-            onChange={() => onToggle(opt)}
-            className="w-3 h-3 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-          />
-          <span className="ml-2 text-[10px] text-gray-500 group-hover:text-gray-800 transition-colors truncate">{opt}</span>
-        </label>
-      ))}
-    </div>
-  </div>
-);
+import type { ContentType } from '../types';
+import { interleaveBySource } from '../utils/content';
 
 const PAGE_SIZE = 12;
 
+const inferContentType = (article: Article): ContentType => {
+  const sourceName = (article.api_source?.name || '').toLowerCase();
+  const url = (article.url || '').toLowerCase();
+  if (sourceName.includes('conference') || url.includes('conference')) return 'conference';
+  if (sourceName.includes('event') || url.includes('event')) return 'event';
+  return 'article';
+};
+
 const SearchDashboard: React.FC = () => {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [articles, setArticles] = useState<Article[]>([]);
-  const [allResults, setAllResults] = useState<Article[]>([]); // cached full result set
+  const [allResults, setAllResults] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
-  const [apiSources, setApiSources] = useState<APISource[]>([]); // real APISourceConfig entries
-  const [scraperSources, setScraperSources] = useState<APISource[]>([]); // scraper entries
+  const [apiSources, setApiSources] = useState<APISource[]>([]);
+  const [scraperSources, setScraperSources] = useState<APISource[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [timedOutSources, setTimedOutSources] = useState<string[]>([]);
+  const [isPartial, setIsPartial] = useState(false);
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [catsData, srcsData, scrapersData] = await Promise.all([
+          articlesApi.getCategories(),
+          articlesApi.getSources(),
+          scrapersApi.list(),
+        ]);
+        setCategories(catsData.slice(0, 10));
+        setApiSources(srcsData);
+        setScraperSources(
+          scrapersData.map((scraper) => ({
+            id: 1000 + scraper.id,
+            name: scraper.name,
+            description: scraper.source_type,
+            response_format: 'scraper',
+            is_active: scraper.is_active,
+            total_articles_fetched: scraper.total_items_scraped,
+          })),
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
+    load();
+  }, []);
 
-  const toggleSave = (id: string) => {
-    setSavedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  useEffect(() => {
+    const checkSaved = async () => {
+      const user = userStorage.getUser();
+      if (!user || allResults.length === 0) return;
+      try {
+        const response = await libraryApi.check(user.id, allResults.map((article) => article.external_id));
+        if (response.success) setSavedIds(new Set(response.saved_ids));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    checkSaved();
+  }, [allResults]);
 
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+    setSelectedCategories((prev) => (prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category]));
   };
 
   const toggleSource = (source: string) => {
-    setSelectedSources(prev =>
-      prev.includes(source)
-        ? prev.filter(s => s !== source)
-        : [...prev, source]
-    );
+    setSelectedSources((prev) => (prev.includes(source) ? prev.filter((item) => item !== source) : [...prev, source]));
   };
 
-  const fetchArticles = async (forceNewSearch = false) => {
+  const saveToHistory = (query: string) => {
+    if (!query.trim()) return;
+    const recent: string[] = JSON.parse(localStorage.getItem('recent_searches') || '[]');
+    localStorage.setItem('recent_searches', JSON.stringify([query.trim(), ...recent.filter((item) => item !== query.trim())].slice(0, 10)));
+  };
+
+  const applyClientFilters = (results: Article[], page: number) => {
+    let filtered = results;
+
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((article) =>
+        article.categories?.some((category) =>
+          selectedCategories.some((selected) => category.toLowerCase().includes(selected.toLowerCase())),
+        ),
+      );
+    }
+
+    if (selectedSources.length > 0) {
+      filtered = filtered.filter((article) => selectedSources.includes(article.api_source?.name || ''));
+    }
+
+    if (dateRange) {
+      const cutoff = new Date();
+      if (dateRange === 'last_30_days') cutoff.setDate(cutoff.getDate() - 30);
+      else if (dateRange === 'last_3_months') cutoff.setMonth(cutoff.getMonth() - 3);
+      else if (dateRange === 'last_year') cutoff.setFullYear(cutoff.getFullYear() - 1);
+
+      filtered = filtered.filter((article) => {
+        if (!article.published_date) return true;
+        const date = new Date(article.published_date);
+        return Number.isNaN(date.getTime()) || date >= cutoff;
+      });
+    }
+
+    filtered = interleaveBySource(filtered);
+
+    const start = (page - 1) * PAGE_SIZE;
+    setArticles(filtered.slice(start, start + PAGE_SIZE));
+    setTotalCount(filtered.length);
+  };
+
+  const fetchArticles = async (forceNewSearch = false, page = currentPage) => {
     setLoading(true);
+    setIsPartial(false);
+    setTimedOutSources([]);
+
     try {
-      if (searchQuery && searchQuery.trim().length > 0) {
-        // Only pass REAL APISourceConfig IDs (not scraper IDs which are client-only)
-        const selectedApiSources = apiSources.filter(s => selectedSources.includes(s.name));
-        const sourceIds = selectedApiSources.length > 0
-          ? selectedApiSources.map(s => s.id)
-          : [];
-
-        // Extract real scraper IDs (remove the +1000 offset applied in loadInitialData)
-        const selectedScrapers = scraperSources.filter(s => selectedSources.includes(s.name));
-        const scraperIds = selectedScrapers.length > 0
-          ? selectedScrapers.map(s => s.id - 1000)
-          : [];
-
-        // Use cached results for page changes; only re-fetch on new search or filter change
+      if (searchQuery.trim()) {
         let cached = allResults;
+
         if (forceNewSearch || cached.length === 0) {
-          const response = await articlesApi.searchLive(searchQuery, 60, sourceIds, scraperIds);
+          const selectedApiSources = apiSources.filter((source) => selectedSources.includes(source.name));
+          const sourceIds = selectedApiSources.map((source) => source.id);
+          const selectedScrapers = scraperSources.filter((source) => selectedSources.includes(source.name));
+          const scraperIds = selectedScrapers.map((source) => source.id - 1000);
+
+          const user = userStorage.getUser();
+          const response = await articlesApi.searchLive(searchQuery, 60, sourceIds, scraperIds, user?.id);
           if (!response.success) {
             setLoading(false);
             return;
           }
+
+          setIsPartial(response.partial_results || false);
+          setTimedOutSources(response.timed_out_sources || []);
           cached = response.articles.map((article, index) => ({
             id: Date.now() + index,
             external_id: article.external_id,
@@ -115,173 +166,158 @@ const SearchDashboard: React.FC = () => {
             keywords: article.keywords,
             citation_count: article.citation_count,
             api_source: { id: 0, name: article.source },
-            fetched_at: new Date().toISOString()
+            fetched_at: new Date().toISOString(),
           }));
+          cached = interleaveBySource(cached);
           setAllResults(cached);
         }
 
-        // Apply client-side filters
-        let filtered = cached;
-        if (selectedCategories.length > 0) {
-          filtered = filtered.filter(article =>
-            article.categories.some(cat =>
-              selectedCategories.some(sel => cat.toLowerCase().includes(sel.toLowerCase()))
-            )
-          );
-        }
-        if (selectedSources.length > 0) {
-          filtered = filtered.filter(article =>
-            selectedSources.includes(article.api_source?.name || '')
-          );
-        }
-        if (dateRange) {
-          const now = new Date();
-          const cutoff = new Date();
-          if (dateRange === 'last_30_days') cutoff.setDate(now.getDate() - 30);
-          else if (dateRange === 'last_3_months') cutoff.setMonth(now.getMonth() - 3);
-          else if (dateRange === 'last_year') cutoff.setFullYear(now.getFullYear() - 1);
-          filtered = filtered.filter(a => {
-            if (!a.published_date) return true;
-            return new Date(a.published_date) >= cutoff;
-          });
-        }
-
-        // Local pagination
-        const start = (currentPage - 1) * PAGE_SIZE;
-        setArticles(filtered.slice(start, start + PAGE_SIZE));
-        setTotalCount(filtered.length);
+        applyClientFilters(cached, page);
       } else {
         const response = await articlesApi.search({
           search: searchQuery,
           categories: selectedCategories.join(','),
           source: selectedSources.join(','),
           date_range: dateRange,
-          page: currentPage,
+          page,
           page_size: PAGE_SIZE,
         });
-        setArticles(response.results);
-        setTotalCount(response.count);
+        const mixed = interleaveBySource(response.results);
+        setArticles(mixed);
+        setAllResults(mixed);
+        setTotalCount(mixed.length);
       }
     } catch (error) {
-      console.error('Failed to fetch articles:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (selectedSources.length === 0) {
-      setSearchError('Lütfen arama yapmak için en az bir kaynak (API veya Scraper) seçin.');
+      setSearchError('Arama yapmadan önce en az bir kaynak seçin.');
+      return;
+    }
+
+    setSearchError('');
+    setCurrentPage(1);
+    setHasSearched(true);
+    setAllResults([]);
+    saveToHistory(searchQuery);
+    await fetchArticles(true, 1);
+  };
+
+  useEffect(() => {
+    if (hasSearched && allResults.length > 0) {
+      applyClientFilters(allResults, currentPage);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (!hasSearched) return;
+    if (selectedSources.length === 0) {
+      setSearchError('Arama yapmadan önce en az bir kaynak seçin.');
+      setArticles([]);
+      setAllResults([]);
+      setTotalCount(0);
       return;
     }
     setSearchError('');
     setCurrentPage(1);
-    setAllResults([]); // clear cache for fresh search
-    setHasSearched(true);
-    if (searchQuery.trim()) {
-      const recent: string[] = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-      const updated = [searchQuery.trim(), ...recent.filter(q => q !== searchQuery.trim())].slice(0, 10);
-      localStorage.setItem('recent_searches', JSON.stringify(updated));
-    }
-    fetchArticles(true);
-  };
-
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const [categoriesData, sourcesData, scrapersData] = await Promise.all([
-          articlesApi.getCategories(),
-          articlesApi.getSources(),
-          scrapersApi.list()
-        ]);
-        setCategories(categoriesData.slice(0, 10));
-        setApiSources(sourcesData); // real IDs — safe to pass to searchLive()
-        setScraperSources(scrapersData.map(s => ({
-          id: 1000 + s.id,
-          name: s.name,
-          description: s.source_type,
-          response_format: 'scraper',
-          is_active: s.is_active,
-          total_articles_fetched: s.total_items_scraped,
-        })));
-      } catch (error) {
-        console.error('Failed to load initial data:', error);
-      }
-    };
-    loadInitialData();
-  }, []);
-
-  // Re-run filter/page on page change (uses cache, no API call)
-  useEffect(() => {
-    if (hasSearched && allResults.length > 0) {
-      fetchArticles(false);
-    }
-  }, [currentPage]);
-
-  // Reset page and re-fetch on filter/date changes
-  useEffect(() => {
-    if (hasSearched) {
-      if (selectedSources.length === 0) {
-        setSearchError('Lütfen arama yapmak için en az bir kaynak (API veya Scraper) seçin.');
-        setArticles([]);
-        setAllResults([]);
-        setTotalCount(0);
-        return;
-      }
-      setSearchError('');
-      setCurrentPage(1);
-      setAllResults([]); // clear cache so filters re-fetch
-      fetchArticles(true);
-    }
+    fetchArticles(true, 1);
   }, [selectedCategories, selectedSources, dateRange]);
 
+  const toggleSave = async (article: Article) => {
+    const user = userStorage.getUser();
+    if (!user) return;
+
+    const externalId = article.external_id;
+    const isSaved = savedIds.has(externalId);
+    try {
+      if (isSaved) {
+        await libraryApi.remove(user.id, externalId);
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(externalId);
+          return next;
+        });
+      } else {
+        await libraryApi.save(user.id, {
+          external_id: article.external_id,
+          title: article.title,
+          abstract: article.abstract,
+          authors: article.authors,
+          published_date: article.published_date || '',
+          journal: article.journal,
+          url: article.url,
+          pdf_url: article.pdf_url,
+          doi: article.doi || '',
+          source: article.api_source?.name || 'Bilinmeyen kaynak',
+          categories: article.categories,
+          citation_count: article.citation_count,
+        });
+        setSavedIds((prev) => new Set(prev).add(externalId));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const toggleLike = async (article: Article) => {
+    const user = userStorage.getUser();
+    if (!user) return;
+    const externalId = article.external_id;
+    const isLiked = likedIds.has(externalId);
+    try {
+      await activityApi.record(user.id, {
+        activity_type: isLiked ? 'remove_like' : 'like',
+        content_id: externalId,
+        content_title: article.title,
+      });
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (isLiked) next.delete(externalId);
+        else next.add(externalId);
+        return next;
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <div id="searchView" className="w-full">
-      <section className="gradient-bg text-white py-16 rounded-2xl mb-8">
-        <div className="max-w-4xl mx-auto text-center px-6">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Discover <span className="text-yellow-300">Academic Content</span>
-          </h2>
-          <p className="text-lg md:text-xl mb-6 text-indigo-100">
-            Search through millions of research papers, conferences, and funding opportunities
+    <div className="space-y-8">
+      <section className="shell page-hero px-6 py-8 md:px-10 md:py-12">
+        <div className="relative z-10 max-w-4xl space-y-5 text-white">
+          <p className="eyebrow text-white/65">Akademik arama</p>
+          <h1 className="font-heading text-5xl leading-tight md:text-6xl">Daha güçlü filtreler, daha net kaynak mantığı ve daha okunabilir akademik sonuçlar.</h1>
+          <p className="max-w-3xl text-base leading-8 text-white/70 md:text-lg">
+            Akademik veri tabanı mantığını daha modern bir editoryal ürün deneyimiyle birleştir; sonra sonuçları kaynak, kategori ve tarih aralığıyla rafine et.
           </p>
-          <div className="max-w-3xl mx-auto mb-6">
-            <form onSubmit={handleSearch} className="relative">
-              {searchError && (
-                <div className="absolute -top-12 left-0 right-0 bg-red-100/90 text-red-700 px-4 py-2 rounded-lg text-sm font-medium shadow-sm backdrop-blur-sm border border-red-200">
-                  {searchError}
-                </div>
-              )}
+
+          <form onSubmit={handleSearch} className="section-card-dark p-3">
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
               <input
                 type="text"
-                placeholder="Search for articles, conferences, funding calls..."
+                placeholder="Makale, dergi, konferans konusu veya fon çağrısı ara..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 text-lg text-gray-800 dark:text-white bg-white dark:bg-gray-700 rounded-full shadow-lg focus:outline-none pr-16 border border-gray-100 dark:border-gray-600 dark:placeholder-gray-400"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="rounded-[22px] bg-white/5 px-4 py-4 text-sm text-white placeholder:text-white/45 focus:outline-none"
               />
-              <button
-                type="submit"
-                className="absolute right-2 top-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
+              <button type="submit" className="btn-primary justify-center">
+                Ara
               </button>
-            </form>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            {categories.slice(0, 4).map(tag => (
-              <button
-                key={tag}
-                onClick={() => {
-                  setSearchQuery(tag);
-                  setCurrentPage(1);
-                  fetchArticles();
-                }}
-                className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-full text-sm hover:bg-opacity-30 cursor-pointer transition-all"
-              >
+            </div>
+            {searchError && <p className="mt-3 text-sm text-red-300">{searchError}</p>}
+          </form>
+
+          <div className="flex flex-wrap gap-2">
+            {categories.slice(0, 5).map((tag) => (
+              <button key={tag} onClick={() => setSearchQuery(tag)} className="chip border-white/12 bg-white/5 text-white/82">
                 {tag}
               </button>
             ))}
@@ -289,196 +325,131 @@ const SearchDashboard: React.FC = () => {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-24 shadow-sm">
-            <h3 className="font-bold text-gray-800 mb-4 text-xs uppercase tracking-widest border-b pb-2">Filters</h3>
+      <section className="shell grid gap-6 xl:grid-cols-[320px_1fr]">
+        <aside className="section-card h-fit p-6">
+          <p className="eyebrow mb-2">Filtreler</p>
+          <h2 className="font-heading text-3xl text-[var(--text-strong)]">Keşfi daralt</h2>
 
-            {categories.length > 0 && (
-              <FilterSection
-                title="Categories"
-                options={categories}
-                selectedOptions={selectedCategories}
-                onToggle={toggleCategory}
-              />
-            )}
-
-            <div className="mb-6">
-              <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-tighter">Date Range</h4>
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="w-full border border-gray-200 rounded px-2 py-1 text-[11px] text-gray-600 bg-white focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm"
-              >
-                <option value="">All time</option>
-                <option value="last_30_days">Last 30 days</option>
-                <option value="last_3_months">Last 3 months</option>
-                <option value="last_year">Last year</option>
+          <div className="mt-6 space-y-6">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Tarih aralığı</label>
+              <select value={dateRange} onChange={(event) => setDateRange(event.target.value)} className="w-full rounded-[18px] border border-[var(--line)] bg-[var(--surface-alt)] px-4 py-3 text-sm text-[var(--text-primary)]">
+                <option value="">Tüm zamanlar</option>
+                <option value="last_30_days">Son 30 gün</option>
+                <option value="last_3_months">Son 3 ay</option>
+                <option value="last_year">Son 1 yıl</option>
               </select>
             </div>
 
-            {/* API Sources */}
-            {apiSources.length > 0 && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter">🔗 API Kaynakları</h4>
-                  <button
-                    onClick={() => {
-                      const apiNames = apiSources.map(s => s.name);
-                      const allSelected = apiNames.every(n => selectedSources.includes(n));
-                      if (allSelected) setSelectedSources(prev => prev.filter(n => !apiNames.includes(n)));
-                      else setSelectedSources(prev => [...new Set([...prev, ...apiNames])]);
-                    }}
-                    className="text-[8px] text-indigo-500 hover:text-indigo-700 font-semibold uppercase"
-                  >
-                    {apiSources.every(s => selectedSources.includes(s.name)) ? 'Temizle' : 'Seç'}
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Kategoriler</label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button key={category} onClick={() => toggleCategory(category)} className={`chip ${selectedCategories.includes(category) ? 'chip-active' : ''}`}>
+                    {category}
                   </button>
-                </div>
-                <div className="space-y-1">
-                  {apiSources.map(s => (
-                    <label key={s.id} className="flex items-center cursor-pointer group">
-                      <input type="checkbox" checked={selectedSources.includes(s.name)}
-                        onChange={() => toggleSource(s.name)}
-                        className="w-3 h-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                      <span className="ml-2 text-[10px] text-gray-500 group-hover:text-gray-800 transition-colors truncate">{s.name}</span>
-                      <span className="ml-auto w-1.5 h-1.5 bg-indigo-400 rounded-full flex-shrink-0"></span>
-                    </label>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* Scraper Sources */}
-            {scraperSources.length > 0 && (
-              <div className="mb-2">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className="text-[9px] font-bold text-teal-400 uppercase tracking-tighter">🕷 Scraper Kaynakları</h4>
-                  <button
-                    onClick={() => {
-                      const scrNames = scraperSources.map(s => s.name);
-                      const allSelected = scrNames.every(n => selectedSources.includes(n));
-                      if (allSelected) setSelectedSources(prev => prev.filter(n => !scrNames.includes(n)));
-                      else setSelectedSources(prev => [...new Set([...prev, ...scrNames])]);
-                    }}
-                    className="text-[8px] text-teal-500 hover:text-teal-700 font-semibold uppercase"
-                  >
-                    {scraperSources.every(s => selectedSources.includes(s.name)) ? 'Temizle' : 'Seç'}
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">API kaynakları</label>
+              <div className="flex flex-wrap gap-2">
+                {apiSources.map((source) => (
+                  <button key={source.id} onClick={() => toggleSource(source.name)} className={`chip ${selectedSources.includes(source.name) ? 'chip-active' : ''}`}>
+                    {source.name}
                   </button>
-                </div>
-                <div className="space-y-1">
-                  {scraperSources.map(s => (
-                    <label key={s.id} className="flex items-center cursor-pointer group">
-                      <input type="checkbox" checked={selectedSources.includes(s.name)}
-                        onChange={() => toggleSource(s.name)}
-                        className="w-3 h-3 rounded border-gray-300 text-teal-600 focus:ring-teal-500" />
-                      <span className="ml-2 text-[10px] text-gray-500 group-hover:text-gray-800 transition-colors truncate">{s.name}</span>
-                      {s.is_active && <span className="ml-auto w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0" title="Aktif"></span>}
-                    </label>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        <div className="lg:col-span-10">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-gray-800">
-              Arama Sonuçları
-              {totalCount > 0 && <span className="text-gray-500 font-normal ml-2">({totalCount} makale)</span>}
-            </h3>
-            {!loading && articles.length > 0 && (
-              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold uppercase">Live Data</span>
-            )}
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Tarayıcı kaynaklar</label>
+              <div className="flex flex-wrap gap-2">
+                {scraperSources.map((source) => (
+                  <button key={source.id} onClick={() => toggleSource(source.name)} className={`chip ${selectedSources.includes(source.name) ? 'chip-active' : ''}`}>
+                    {source.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+        </aside>
+
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="eyebrow mb-2">Sonuçlar</p>
+              <h2 className="font-heading text-4xl text-[var(--text-strong)]">Meta verisi güçlü akademik sonuçlar</h2>
+            </div>
+            <span className="rounded-full bg-[var(--brand-soft)] px-4 py-2 text-xs font-semibold text-[var(--brand)]">{totalCount} sonuç</span>
+          </div>
+
+          {isPartial && (
+            <div className="rounded-[24px] border border-[rgba(185,109,23,0.22)] bg-[rgba(185,109,23,0.08)] px-5 py-4 text-sm text-[var(--warning)]">
+              Bazı kaynaklar henüz yanıt vermedi: {timedOutSources.length > 0 ? timedOutSources.join(', ') : 'arka planda tarayıcılar çalışıyor.'}
+            </div>
+          )}
 
           {!hasSearched ? (
-            <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-              <svg className="w-20 h-20 mx-auto text-indigo-200 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-              <h3 className="text-2xl font-semibold text-gray-700 mb-2">Aramaya başlayın</h3>
-              <p className="text-gray-500">Yukarıdaki arama çubuğunu kullanarak makale, konferans veya araştırma arayın</p>
+            <div className="section-card px-8 py-16 text-center">
+              <p className="font-heading text-3xl text-[var(--text-strong)]">Yüksek niyetli bir araştırma sorgusuyla başla.</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Kaynak seçip aramayı çalıştırdığında sonuçlar burada görünecek.</p>
             </div>
           ) : loading ? (
-            <div className="text-center py-20">
-              <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
-              <p className="mt-4 text-gray-600">Makaleler aranıyor...</p>
+            <div className="section-card px-8 py-16 text-center">
+              <p className="font-heading text-3xl text-[var(--text-strong)]">Akademik kaynaklar taranıyor...</p>
             </div>
           ) : articles.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {articles.map(article => (
+              <div className="space-y-4">
+                {articles.map((article) => (
                   <ContentCard
-                    key={article.id}
+                    key={article.external_id}
                     content={{
-                      id: article.id.toString(),
-                      type: 'article',
+                      id: article.external_id,
+                      type: inferContentType(article),
                       title: article.title,
-                      description: article.abstract,
-                      source: article.api_source?.name || 'Unknown',
-                      authors: article.authors.map(a => a.name).join(', '),
+                      description: article.abstract || 'Özet bilgisi bulunmuyor.',
+                      source: article.api_source?.name || 'Akademik kaynak',
+                      authors: article.authors.map((author) => author.name).join(', '),
                       date: article.published_date || article.fetched_at,
                       journal: article.journal,
                       citations: article.citation_count,
                       tags: article.categories.slice(0, 3),
+                      keywords: article.keywords.slice(0, 2),
                       url: article.url,
                       pdfUrl: article.pdf_url,
                       imageUrl: article.image_url,
                     }}
-                    isSaved={savedIds.has(article.id.toString())}
-                    onToggleSave={() => toggleSave(article.id.toString())}
+                    isSaved={savedIds.has(article.external_id)}
+                    onToggleSave={() => toggleSave(article)}
+                    isLiked={likedIds.has(article.external_id)}
+                    onToggleLike={() => toggleLike(article)}
                   />
                 ))}
               </div>
 
-              {/* Pagination */}
-              {totalCount > 12 && (
-                <div className="mt-8 flex justify-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    ← Önceki
+              {totalPages > 1 && (
+                <div className="flex justify-center gap-3 pt-4">
+                  <button onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-40">
+                    Önceki
                   </button>
-                  <span className="px-4 py-2 text-gray-700">
-                    Sayfa {currentPage} / {Math.ceil(totalCount / 12)}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(p => p + 1)}
-                    disabled={currentPage >= Math.ceil(totalCount / 12)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Sonraki →
+                  <div className="chip">{currentPage} / {totalPages}</div>
+                  <button onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-40">
+                    Sonraki
                   </button>
                 </div>
               )}
             </>
           ) : (
-            <div className="text-center py-20 bg-white rounded-xl border border-gray-200">
-              <svg className="w-20 h-20 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              <h3 className="text-2xl font-semibold text-gray-800 mb-2">Sonuç bulunamadı</h3>
-              <p className="text-gray-600 mb-4">Farklı anahtar kelimeler veya filtreler deneyin</p>
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategories([]);
-                  setSelectedSources([]);
-                  setDateRange('');
-                  setCurrentPage(1);
-                  setHasSearched(false);
-                }}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Filtreleri Temizle
-              </button>
+            <div className="section-card px-8 py-16 text-center">
+              <p className="font-heading text-3xl text-[var(--text-strong)]">Bu kombinasyonda sonuç bulunamadı.</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">Kategori, tarih aralığı veya sorguyu genişletmeyi dene.</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 };

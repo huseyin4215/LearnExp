@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'webscraping.apps.WebscrapingConfig',
     'collecterService',
     'saved_data.apps.SavedDataConfig',
+    'NLP_ProcessingService.apps.NlpProcessingserviceConfig',
+    'recommendationService.apps.RecommendationserviceConfig',
 ]
 
 MIDDLEWARE = [
@@ -206,6 +208,16 @@ LOGGING = {
             'propagate': False,
         },
         'api_collecter': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'NLP_ProcessingService': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'recommendationService': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,

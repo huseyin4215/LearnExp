@@ -119,6 +119,8 @@ export interface LiveSearchResponse {
     external_id: string;
   }>;
   errors?: Array<{ source: string; error: string }>;
+  timed_out_sources?: string[];
+  partial_results?: boolean;
 }
 
 export const authApi = {
@@ -242,7 +244,7 @@ export const articlesApi = {
     return data.categories || data;
   },
 
-  async searchLive(query: string, maxResults: number = 20, sourceIds: number[] = [], scraperIds: number[] = []): Promise<LiveSearchResponse> {
+  async searchLive(query: string, maxResults: number = 20, sourceIds: number[] = [], scraperIds: number[] = [], userId?: number): Promise<LiveSearchResponse> {
     const response = await fetch(`${API_BASE_URL}/search/live/`, {
       method: 'POST',
       headers: {
@@ -252,7 +254,8 @@ export const articlesApi = {
         query,
         max_results: maxResults,
         source_ids: sourceIds,
-        scraper_ids: scraperIds
+        scraper_ids: scraperIds,
+        user_id: userId
       }),
     });
 
@@ -422,6 +425,105 @@ export const userStorage = {
 
   isLoggedIn(): boolean {
     return !!this.getUser();
+  },
+};
+
+// Activity API (Kullanıcı Aktiviteleri)
+export interface ActivityItem {
+  id: number;
+  type: 'search' | 'save' | 'remove_save' | 'view' | 'like' | 'remove_like' | 'profile_update';
+  content_title: string;
+  content_id: string;
+  query: string;
+  created_at: string;
+}
+
+export interface ActivityResponse {
+  success: boolean;
+  activities: ActivityItem[];
+}
+
+export const activityApi = {
+  async record(userId: number, activity: {
+    activity_type: 'search' | 'save' | 'remove_save' | 'view' | 'like' | 'remove_like' | 'profile_update';
+    content_title?: string;
+    content_id?: string;
+    query?: string;
+  }): Promise<{ success: boolean; message: string; activity_id?: number }> {
+    const response = await fetch(`${API_BASE_URL}/activity/record/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, ...activity }),
+    });
+    if (!response.ok) throw new Error('Failed to record activity');
+    return response.json();
+  },
+
+  async getRecent(userId: number, limit: number = 10): Promise<ActivityResponse> {
+    const response = await fetch(`${API_BASE_URL}/activity/recent/?user_id=${userId}&limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch activities');
+    return response.json();
+  },
+};
+
+// Recommendation API (Öneri Sistemi)
+export interface RecommendationItem {
+  external_id: string;
+  title: string;
+  abstract: string;
+  authors: Array<{ name: string }>;
+  published_date: string;
+  url: string;
+  pdf_url: string;
+  image_url: string;
+  doi: string;
+  source: string;
+  categories: string[];
+  score: number;
+}
+
+export interface RecommendationResponse {
+  success: boolean;
+  recommendations: RecommendationItem[];
+  count: number;
+  message?: string;
+}
+
+export interface NLPStatusResponse {
+  success: boolean;
+  nlp_processed: number;
+  total_content: number;
+  unprocessed: number;
+  coverage: number;
+}
+
+export const recommendationApi = {
+  async getRecommendations(userId: number, limit: number = 20): Promise<RecommendationResponse> {
+    const response = await fetch(`${API_BASE_URL}/recommendations/?user_id=${userId}&limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch recommendations');
+    return response.json();
+  },
+
+  async getSimilar(externalId: string, limit: number = 10): Promise<{ success: boolean; similar: RecommendationItem[]; count: number }> {
+    const response = await fetch(`${API_BASE_URL}/recommendations/similar/?external_id=${encodeURIComponent(externalId)}&limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch similar articles');
+    return response.json();
+  },
+
+  async getNLPStatus(): Promise<NLPStatusResponse> {
+    const response = await fetch(`${API_BASE_URL}/recommendations/nlp-status/`);
+    if (!response.ok) throw new Error('Failed to fetch NLP status');
+    return response.json();
+  },
+
+  async triggerProcessing(batchSize: number = 50): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/recommendations/process/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batch_size: batchSize }),
+    });
+    if (!response.ok) throw new Error('Failed to trigger NLP processing');
+    return response.json();
   },
 };
 

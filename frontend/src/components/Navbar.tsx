@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { userStorage } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -14,33 +15,63 @@ interface UserData {
 
 const Navbar: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
+  const { language, setLanguage, isEnglish } = useLanguage();
+
+  const mainLinks = useMemo(
+    () => [
+      { path: '/', label: isEnglish ? 'Home' : 'Anasayfa' },
+      { path: '/search', label: isEnglish ? 'Publications' : 'Yayınlar' },
+      { path: '/news', label: isEnglish ? 'Announcements' : 'Duyurular' },
+      { path: '/library', label: isEnglish ? 'Library' : 'Kütüphane' },
+    ],
+    [isEnglish],
+  );
 
   useEffect(() => {
-    // Kullanıcı bilgilerini localStorage'dan al
     const storedUser = userStorage.getUser();
-    if (storedUser) {
-      setUserData(storedUser);
-
-      // Backend'den güncel bilgileri al
-      fetch(`${API_BASE_URL}/user/${storedUser.id}/`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.user) {
-            setUserData({
-              id: data.user.id,
-              email: data.user.email,
-              fullName: data.user.fullName,
-              isProfileComplete: data.user.profile?.isProfileComplete || false
-            });
-          }
-        })
-        .catch(console.error);
+    if (!storedUser) {
+      setUserData(null);
+      return;
     }
-  }, [location.pathname]); // Her sayfa değişiminde kontrol et
+
+    setUserData(storedUser);
+    fetch(`${API_BASE_URL}/user/${storedUser.id}/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          setUserData({
+            id: data.user.id,
+            email: data.user.email,
+            fullName: data.user.fullName,
+            isProfileComplete: data.user.profile?.isProfileComplete || false,
+          });
+        }
+      })
+      .catch(console.error);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isProfileOpen && !(event.target as HTMLElement).closest('.profile-dropdown')) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isProfileOpen]);
 
   const handleLogout = () => {
     setIsProfileOpen(false);
@@ -52,161 +83,181 @@ const Navbar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Kullanıcı adından baş harfleri al
-  const getInitials = (name: string) => {
+  const initials = (name?: string) => {
     if (!name) return '?';
     const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-indigo-600">LearnExp</h1>
-              <p className="text-xs text-gray-500">Smart Academic Discovery</p>
-            </Link>
-          </div>
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              <Link
-                to="/"
-                className={`${isActive('/') ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600'} hover:text-indigo-600 hover:bg-indigo-50 px-3 py-2 rounded-md text-sm font-medium transition-colors`}
-              >
-                Anasayfa
-              </Link>
-              <Link
-                to="/search"
-                className={`${isActive('/search') ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600'} hover:text-indigo-600 hover:bg-indigo-50 px-3 py-2 rounded-md text-sm font-medium transition-colors`}
-              >
-                Arama
-              </Link>
-              <Link
-                to="/library"
-                className={`${isActive('/library') ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600'} hover:text-indigo-600 hover:bg-indigo-50 px-3 py-2 rounded-md text-sm font-medium transition-colors`}
-              >
-                Kütüphanem
-              </Link>
+    <header
+      className={`sticky top-0 z-40 border-b transition-all duration-300 ${
+        scrolled ? 'border-[var(--line-soft)] bg-[var(--surface-glass)] backdrop-blur-xl' : 'border-transparent bg-transparent'
+      }`}
+    >
+      <div className="shell">
+        <nav className="flex items-center justify-between py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#355fd4,#2147a8)] shadow-[0_16px_32px_rgba(45,99,226,0.25)]">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
             </div>
+            <div>
+              <p className="text-lg font-semibold tracking-tight text-[var(--text-strong)]">LearnExp</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+                {isEnglish ? 'Smart Academic Discovery' : 'Akıllı Akademik Keşif'}
+              </p>
+            </div>
+          </Link>
+
+          <div className="hidden items-center gap-1 lg:flex">
+            {mainLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`relative rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  isActive(link.path)
+                    ? 'nav-link-active bg-[var(--brand-soft)] text-[var(--brand)]'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--text-strong)]'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
-          <div className="flex items-center space-x-4">
-            {/* Dark Mode Toggle */}
+
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
-              title={isDark ? 'Aydınlık Mod' : 'Karanlık Mod'}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:text-[var(--text-strong)]"
+              title={isDark ? (isEnglish ? 'Light theme' : 'Açık tema') : isEnglish ? 'Dark theme' : 'Koyu tema'}
             >
               {isDark ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
               )}
             </button>
+
+            <div className="hidden items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-1 sm:flex">
+              <span className="px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                {isEnglish ? 'Lang' : 'Dil'}
+              </span>
+              <button
+                onClick={() => setLanguage('tr')}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  language === 'tr' ? 'bg-[var(--brand-soft)] text-[var(--brand)]' : 'text-[var(--text-muted)]'
+                }`}
+                title="Türkçe"
+              >
+                TR
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  language === 'en' ? 'bg-[var(--brand-soft)] text-[var(--brand)]' : 'text-[var(--text-muted)]'
+                }`}
+                title="English"
+              >
+                EN
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsMobileMenuOpen((value) => !value)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--text-muted)] lg:hidden"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
+              </svg>
+            </button>
+
             {userData ? (
-              <div className="relative">
+              <div className="relative profile-dropdown">
                 <button
-                  className="flex items-center space-x-2 focus:outline-none"
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-3 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-2 shadow-[var(--shadow-sm)]"
+                  onClick={() => setIsProfileOpen((value) => !value)}
                 >
-                  <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition-shadow">
-                    <span className="text-white text-sm font-medium">{getInitials(userData.fullName)}</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#355fd4,#2147a8)] text-xs font-bold text-white">
+                    {initials(userData.fullName)}
                   </div>
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-700 leading-tight">{userData.fullName || 'Kullanıcı'}</p>
-                    <p className="text-xs text-gray-500">{userData.email}</p>
+                  <div className="hidden text-left md:block">
+                    <p className="text-sm font-semibold text-[var(--text-strong)]">{userData.fullName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{isEnglish ? 'Research profile' : 'Araştırma profili'}</p>
                   </div>
-                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-100 animate-fadeIn">
-                    {/* User Info Header */}
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-800">{userData.fullName}</p>
-                      <p className="text-xs text-gray-500 truncate">{userData.email}</p>
+                  <div className="absolute right-0 mt-3 w-64 rounded-3xl border border-[var(--line-soft)] bg-[var(--surface)] p-2 shadow-[var(--shadow-lg)]">
+                    <div className="rounded-2xl bg-[var(--surface-alt)] p-4">
+                      <p className="text-sm font-semibold text-[var(--text-strong)]">{userData.fullName}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{userData.email}</p>
                       {!userData.isProfileComplete && (
-                        <Link
-                          to="/complete-profile"
-                          onClick={() => setIsProfileOpen(false)}
-                          className="inline-flex items-center mt-2 text-xs text-amber-600 hover:text-amber-700"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          Profili tamamla
+                        <Link to="/complete-profile" onClick={() => setIsProfileOpen(false)} className="mt-3 inline-flex text-xs font-semibold text-[var(--brand)]">
+                          {isEnglish ? 'Complete profile' : 'Profili tamamla'}
                         </Link>
                       )}
                     </div>
-
-                    {/* Menu Items */}
-                    <div className="py-1">
-                      <Link
-                        to="/profile"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Profilim
+                    <div className="mt-2 grid gap-1">
+                      <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="rounded-2xl px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-alt)]">
+                        {isEnglish ? 'Profile' : 'Profil'}
                       </Link>
-                      <Link
-                        to="/settings"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Ayarlar
+                      <Link to="/recommendations" onClick={() => setIsProfileOpen(false)} className="rounded-2xl px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-alt)]">
+                        {isEnglish ? 'Recommendations' : 'Öneriler'}
                       </Link>
-                    </div>
-
-                    <div className="border-t border-gray-100 py-1">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Çıkış Yap
+                      <Link to="/settings" onClick={() => setIsProfileOpen(false)} className="rounded-2xl px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-alt)]">
+                        {isEnglish ? 'Settings' : 'Ayarlar'}
+                      </Link>
+                      <button onClick={handleLogout} className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-[var(--danger)] hover:bg-[var(--surface-alt)]">
+                        {isEnglish ? 'Sign out' : 'Çıkış yap'}
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
-                <Link
-                  to="/login"
-                  className="text-gray-600 hover:text-indigo-600 px-3 py-2 text-sm font-medium transition-colors"
-                >
-                  Giriş Yap
+              <div className="hidden items-center gap-2 sm:flex">
+                <Link to="/login" className="btn-secondary">
+                  {isEnglish ? 'Sign in' : 'Giriş yap'}
                 </Link>
-                <Link
-                  to="/register"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Kayıt Ol
+                <Link to="/register" className="btn-primary">
+                  {isEnglish ? 'Create account' : 'Kayıt ol'}
                 </Link>
               </div>
             )}
           </div>
-        </div>
-      </nav>
+        </nav>
+
+        {isMobileMenuOpen && (
+          <div className="mb-4 rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface)] p-3 shadow-[var(--shadow-md)] lg:hidden">
+            <div className="grid gap-1">
+              {mainLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold ${
+                    isActive(link.path) ? 'bg-[var(--brand-soft)] text-[var(--brand)]' : 'text-[var(--text-primary)]'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 };

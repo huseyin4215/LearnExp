@@ -59,6 +59,14 @@ app.conf.beat_schedule = {
         'task': 'webscraping.tasks.scrape_tasks.health_check_scrapers_task',
         'schedule': crontab(minute=0, hour='*/2'),
     },
+    
+    # NLP: Process unprocessed articles every 2 hours
+    'nlp-process-unprocessed-every-2-hours': {
+        'task': 'nlp.process_all_unprocessed',
+        'schedule': crontab(minute=15, hour='*/2'),
+        'kwargs': {'batch_size': 100},
+        'options': {'expires': 3600},
+    },
 }
 
 # Celery Configuration

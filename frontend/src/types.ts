@@ -2,7 +2,7 @@
 export type ViewType = 'dashboard' | 'search' | 'library' | 'profile' | 'settings';
 
 // Content Types - using string literals instead of enums
-export type ContentType = 'article' | 'conference' | 'funding';
+export type ContentType = 'article' | 'conference' | 'funding' | 'event' | 'announcement';
 
 // Academic Content Interface
 export interface AcademicContent {
@@ -23,6 +23,7 @@ export interface AcademicContent {
     citations?: number;
     pdfUrl?: string;
     imageUrl?: string;
+    matchScore?: number;
 }
 
 // User Interface

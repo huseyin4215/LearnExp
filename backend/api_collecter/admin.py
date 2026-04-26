@@ -239,9 +239,10 @@ class ScraperKonfigAdmin(admin.ModelAdmin):
         ('🚀 Advanced Crawling (Multi-Stage)', {
             'fields': (
                 'enable_multi_step', 'enable_query_encoding', 'enable_relative_url_fix',
-                'max_depth', 'max_pages_per_step'
+                'max_depth', 'max_pages_per_step',
+                'enable_infinite_scroll', 'scroll_count', 'scroll_delay'
             ),
-            'description': 'Çok aşamalı tarama (Stage 1 -> Stage 2) ayarları.'
+            'description': 'Çok aşamalı tarama ve dinamik içerik (Infinite Scroll) ayarları.'
         }),
         ('🎯 Stage 1 Selectors (Discovery)', {
             'fields': ('step1_selectors',),

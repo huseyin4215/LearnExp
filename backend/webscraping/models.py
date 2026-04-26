@@ -171,6 +171,22 @@ class ScraperConfig(models.Model):
         help_text="Aşama başına maksimum sayfa limiti"
     )
     
+    # Infinite Scroll
+    enable_infinite_scroll = models.BooleanField(
+        default=False,
+        help_text="Sonsuz kaydırma (Infinite Scroll) aktif mi?"
+    )
+    scroll_count = models.IntegerField(
+        default=5,
+        blank=True,
+        help_text="Kaç kez aşağı kaydırılacak?"
+    )
+    scroll_delay = models.IntegerField(
+        default=2000,
+        blank=True,
+        help_text="Kaydırmalar arası bekleme (ms)"
+    )
+    
     # İstatistikler
     total_items_scraped = models.IntegerField(default=0)
     success_rate = models.FloatField(default=0.0, help_text="Başarı oranı (%)")

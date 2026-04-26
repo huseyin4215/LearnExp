@@ -6,4 +6,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/search/live/', search_live_from_apis, name='search_live_direct'),
     path('api/', include('api.urls')),
+    path('api/recommendations/', include('recommendationService.urls')),
 ]

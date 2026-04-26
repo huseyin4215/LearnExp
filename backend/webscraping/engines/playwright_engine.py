@@ -187,7 +187,7 @@ class PlaywrightScraperEngine(BaseScraperEngine):
                 time.sleep(self.extra_wait)
             
             # 3. Infinite Scroll / Standard Scroll
-            if self.config.selectors.get('infinite_scroll'):
+            if getattr(self.config, 'enable_infinite_scroll', False) or self.config.selectors.get('infinite_scroll'):
                 self._scroll_infinite()
             elif self.config.selectors.get('scroll'):
                 self._scroll_page()
@@ -213,13 +213,16 @@ class PlaywrightScraperEngine(BaseScraperEngine):
         except Exception:
             pass
 
-    def _scroll_infinite(self, max_scrolls: int = 10):
-        """Robust infinite scroll handler"""
+    def _scroll_infinite(self, max_scrolls: int = None, delay_ms: int = None):
+        """Robust infinite scroll handler using config settings"""
+        max_scrolls = max_scrolls or getattr(self.config, 'scroll_count', 10)
+        delay_sec = (delay_ms or getattr(self.config, 'scroll_delay', 2000)) / 1000.0
+        
         try:
             last_height = self.page.evaluate("document.body.scrollHeight")
             for i in range(max_scrolls):
                 self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                time.sleep(2)
+                time.sleep(delay_sec)
                 new_height = self.page.evaluate("document.body.scrollHeight")
                 if new_height == last_height:
                     break

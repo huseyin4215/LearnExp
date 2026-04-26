@@ -37,4 +37,8 @@ urlpatterns = [
     path('library/save/', views.library_save, name='library_save'),
     path('library/remove/', views.library_remove, name='library_remove'),
     path('library/check/', views.library_check, name='library_check'),
+    
+    # Activity (Kullanıcı Aktiviteleri)
+    path('activity/record/', views.record_activity, name='record_activity'),
+    path('activity/recent/', views.get_recent_activities, name='recent_activities'),
 ]

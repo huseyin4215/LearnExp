@@ -454,8 +454,9 @@ def run_all_scrapers(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_articles(request):
-    """Makaleleri listele - Gelişmiş filtreleme ve pagination"""
+    """Makaleleri listele - Article ve ScrapedContent modellerini birleştirir"""
     from api_collecter.models import Article
+    from webscraping.models import ScrapedContent
     from django.db.models import Q
     from datetime import datetime, timedelta
     
@@ -463,114 +464,104 @@ def get_articles(request):
     search = request.query_params.get('search', '').strip()
     categories = request.query_params.get('categories', '').strip()
     source = request.query_params.get('source', '').strip()
-    date_from = request.query_params.get('date_from', '').strip()
-    date_to = request.query_params.get('date_to', '').strip()
     date_range = request.query_params.get('date_range', '').strip()
     page = int(request.query_params.get('page', 1))
     page_size = int(request.query_params.get('page_size', 20))
     
-    # Base queryset
-    queryset = Article.objects.select_related('api_source').all().order_by('-published_date', '-fetched_at')
-    
-    # Search filter
+    # --- 1. Query Article Model ---
+    article_qs = Article.objects.select_related('api_source').all()
     if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) | 
-            Q(abstract__icontains=search) |
-            Q(authors__icontains=search) |
-            Q(keywords__icontains=search)
+        article_qs = article_qs.filter(
+            Q(title__icontains=search) | Q(abstract__icontains=search) |
+            Q(authors__icontains=search) | Q(keywords__icontains=search)
         )
-    
-    # Categories filter
     if categories:
-        category_list = [c.strip() for c in categories.split(',')]
-        q_objects = Q()
-        for category in category_list:
-            q_objects |= Q(categories__icontains=category)
-        queryset = queryset.filter(q_objects)
-    
-    # Source filter
+        for cat in categories.split(','):
+            article_qs = article_qs.filter(categories__icontains=cat.strip())
     if source:
-        try:
-            source_id = int(source)
-            queryset = queryset.filter(api_source_id=source_id)
-        except ValueError:
-            queryset = queryset.filter(api_source__name__icontains=source)
-    
-    # Date range filter
-    if date_from:
-        try:
-            from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
-            queryset = queryset.filter(published_date__gte=from_date)
-        except ValueError:
-            pass
-    
-    if date_to:
-        try:
-            to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
-            queryset = queryset.filter(published_date__lte=to_date)
-        except ValueError:
-            pass
-    
-    # Quick date filters
+        article_qs = article_qs.filter(Q(api_source__name__icontains=source) | Q(api_source_id=source if source.isdigit() else 0))
+
+    # --- 2. Query ScrapedContent Model ---
+    scraped_qs = ScrapedContent.objects.select_related('scraper_config').all()
+    if search:
+        scraped_qs = scraped_qs.filter(
+            Q(title__icontains=search) | Q(abstract__icontains=search)
+        )
+    if categories:
+        for cat in categories.split(','):
+            scraped_qs = scraped_qs.filter(categories__icontains=cat.strip())
+    if source:
+        scraped_qs = scraped_qs.filter(Q(scraper_config__name__icontains=source) | Q(scraper_config_id=source if source.isdigit() else 0))
+
+    # Date range filters for both
     if date_range:
         today = datetime.now().date()
-        if date_range == 'last_30_days':
-            queryset = queryset.filter(published_date__gte=today - timedelta(days=30))
-        elif date_range == 'last_3_months':
-            queryset = queryset.filter(published_date__gte=today - timedelta(days=90))
-        elif date_range == 'last_year':
-            queryset = queryset.filter(published_date__gte=today - timedelta(days=365))
+        cutoff = None
+        if date_range == 'last_30_days': cutoff = today - timedelta(days=30)
+        elif date_range == 'last_3_months': cutoff = today - timedelta(days=90)
+        elif date_range == 'last_year': cutoff = today - timedelta(days=365)
+        
+        if cutoff:
+            article_qs = article_qs.filter(published_date__gte=cutoff)
+            scraped_qs = scraped_qs.filter(published_date__gte=cutoff)
+
+    # Combine and Sort
+    combined_results = []
     
-    # Count total
-    total = queryset.count()
+    # Map Articles
+    for a in article_qs.order_by('-published_date')[:200]:
+        combined_results.append({
+            'id': a.id,
+            'external_id': a.external_id,
+            'title': a.title,
+            'abstract': a.abstract,
+            'authors': a.authors,
+            'published_date': a.published_date.isoformat() if a.published_date else None,
+            'journal': a.journal,
+            'url': a.url,
+            'pdf_url': a.pdf_url,
+            'image_url': getattr(a, 'image_url', ''),
+            'doi': a.doi,
+            'categories': a.categories,
+            'citation_count': a.citation_count,
+            'api_source': {'id': a.api_source.id, 'name': a.api_source.name} if a.api_source else None,
+            'type': 'article'
+        })
+        
+    # Map ScrapedContent
+    for s in scraped_qs.order_by('-published_date')[:200]:
+        combined_results.append({
+            'id': s.id + 1000000,
+            'external_id': s.external_id,
+            'title': s.title,
+            'abstract': s.abstract,
+            'authors': s.authors,
+            'published_date': s.published_date.isoformat() if s.published_date else None,
+            'journal': s.journal,
+            'url': s.source_url,
+            'pdf_url': s.pdf_url,
+            'image_url': s.image_url,
+            'doi': s.doi,
+            'categories': s.categories,
+            'citation_count': 0,
+            'api_source': {'id': s.scraper_config.id + 1000, 'name': s.scraper_config.name} if s.scraper_config else None,
+            'type': 'scraped'
+        })
+
+    # Sort merged list
+    combined_results.sort(key=lambda x: x['published_date'] or '', reverse=True)
     
-    # Pagination
+    total = len(combined_results)
     start = (page - 1) * page_size
     end = start + page_size
-    articles = queryset[start:end]
-    
-    # Serialize
-    results = []
-    for article in articles:
-        results.append({
-            'id': article.id,
-            'external_id': article.external_id,
-            'title': article.title,
-            'abstract': article.abstract,
-            'authors': article.authors,
-            'published_date': article.published_date.isoformat() if article.published_date else None,
-            'journal': article.journal,
-            'volume': article.volume,
-            'issue': article.issue,
-            'pages': article.pages,
-            'url': article.url,
-            'pdf_url': article.pdf_url,
-            'image_url': getattr(article, 'image_url', ''),
-            'doi': article.doi,
-            'categories': article.categories,
-            'keywords': article.keywords,
-            'citation_count': article.citation_count,
-            'api_source': {
-                'id': article.api_source.id,
-                'name': article.api_source.name,
-            } if article.api_source else None,
-            'fetched_at': article.fetched_at.isoformat(),
-        })
-    
-    # Calculate pagination
-    total_pages = (total + page_size - 1) // page_size
-    has_next = page < total_pages
-    has_previous = page > 1
+    paged_results = combined_results[start:end]
     
     return Response({
         'count': total,
-        'next': f'?page={page + 1}' if has_next else None,
-        'previous': f'?page={page - 1}' if has_previous else None,
-        'total_pages': total_pages,
+        'total_pages': (total + page_size - 1) // page_size if total > 0 else 1,
         'current_page': page,
         'page_size': page_size,
-        'results': results
+        'results': paged_results
     })
 
 
@@ -652,6 +643,17 @@ def search_live_from_apis(request):
             'success': False,
             'message': 'Arama sorgusu gerekli'
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Aktivite kaydet
+    user_id = request.data.get('user_id')
+    if user_id:
+        from .models import UserActivity
+        UserActivity.objects.create(
+            user_id=user_id,
+            activity_type='search',
+            query=search_query,
+            content_title=f"'{search_query}' araması"
+        )
     
     has_api_sources = bool(source_ids)
     has_scraper_sources = bool(scraper_ids)
@@ -816,39 +818,78 @@ def search_live_from_apis(request):
         except Exception as e:
             return {'source': config.name, 'articles': [], 'error': str(e)}
     
+    # ==================== DATABASE SEARCH ====================
+    from webscraping.models import ScrapedContent
+    from django.db.models import Q
+    
+    if search_query:
+        db_items = ScrapedContent.objects.filter(
+            Q(title__icontains=search_query) | Q(abstract__icontains=search_query)
+        ).select_related('scraper_config')[:40]
+        
+        db_results = []
+        for item in db_items:
+            authors = item.authors or []
+            if isinstance(authors, list):
+                authors = [a if isinstance(a, dict) else {'name': str(a)} for a in authors if a]
+            
+            db_results.append({
+                'title': item.title,
+                'abstract': item.abstract,
+                'authors': authors,
+                'published_date': str(item.published_date) if item.published_date else '',
+                'journal': item.journal or '',
+                'url': item.source_url,
+                'pdf_url': item.pdf_url,
+                'image_url': item.image_url,
+                'doi': item.doi,
+                'categories': item.categories,
+                'source': item.scraper_config.name,
+                'external_id': item.external_id,
+            })
+        if db_results:
+            articles_by_source['Sistem Kayıtları'] = db_results
+
     # ==================== PARALLEL FETCH ====================
     
-    futures = []
+    futures_map = {}
+    from concurrent.futures import TimeoutError as FuturesTimeoutError
+    timed_out_sources = []
     
     with ThreadPoolExecutor(max_workers=6) as executor:
         # Submit API source tasks
         if has_api_sources:
-            if source_ids:
-                api_sources = APISourceConfig.objects.filter(id__in=source_ids, is_active=True)
-            else:
-                api_sources = APISourceConfig.objects.filter(is_active=True)
-            
-            sources_searched += api_sources.count()
-            for source in api_sources:
-                futures.append(executor.submit(_fetch_from_api_source, source))
+            api_sources_list = list(APISourceConfig.objects.filter(id__in=source_ids, is_active=True)) if source_ids else list(APISourceConfig.objects.filter(is_active=True))
+            sources_searched += len(api_sources_list)
+            for source in api_sources_list:
+                futures_map[executor.submit(_fetch_from_api_source, source)] = source.name
         
         # Submit scraper source tasks
-        if has_scraper_sources and scraper_ids:
-            scraper_configs = ScraperConfig.objects.filter(id__in=scraper_ids, is_active=True)
-            sources_searched += scraper_configs.count()
+        if has_scraper_sources:
+            scraper_configs = list(ScraperConfig.objects.filter(id__in=scraper_ids, is_active=True)) if scraper_ids else list(ScraperConfig.objects.filter(is_active=True))
+            sources_searched += len(scraper_configs)
             for config in scraper_configs:
-                futures.append(executor.submit(_fetch_from_scraper_source, config))
+                futures_map[executor.submit(_fetch_from_scraper_source, config)] = config.name
         
-        # Collect results with timeout
-        for future in as_completed(futures, timeout=120):
-            try:
-                result = future.result(timeout=60)
-                if result['articles']:
-                    articles_by_source[result['source']] = result['articles']
-                if result['error']:
-                    errors.append({'source': result['source'], 'error': result['error']})
-            except Exception as e:
-                errors.append({'source': 'unknown', 'error': f'Task error: {str(e)}'})
+        # Collect results with total loop timeout
+        try:
+            # We wait up to 45 seconds for a "live" response - balanced for user experience
+            for future in as_completed(futures_map.keys(), timeout=45):
+                source_name = futures_map[future]
+                try:
+                    result = future.result(timeout=10) # Individual result timeout check
+                    if result.get('articles'):
+                        articles_by_source[result['source']] = result['articles']
+                    if result.get('error'):
+                        errors.append({'source': result['source'], 'error': result['error']})
+                except Exception as e:
+                    errors.append({'source': source_name, 'error': f'Task error: {str(e)}'})
+        except FuturesTimeoutError:
+            # If the whole as_completed loop times out, find which ones didn't finish
+            for future, name in futures_map.items():
+                if not future.done():
+                    timed_out_sources.append(name)
+            logger.warning(f"Live search timed out for query '{search_query}'. Incomplete: {timed_out_sources}")
     
     # ==================== SONUÇLARI BİRLEŞTİR ====================
     if not articles_by_source and not errors:
@@ -882,7 +923,9 @@ def search_live_from_apis(request):
         'total_found': len(unique_articles),
         'sources_searched': sources_searched,
         'articles': unique_articles[:max_results],
-        'errors': errors if errors else None
+        'errors': errors if errors else None,
+        'timed_out_sources': timed_out_sources if timed_out_sources else None,
+        'partial_results': bool(timed_out_sources)
     })
 
 
@@ -1071,6 +1114,15 @@ def library_save(request):
         citation_count=request.data.get('citation_count', 0),
     )
     
+    # Aktivite kaydet
+    from .models import UserActivity
+    UserActivity.objects.create(
+        user=user,
+        activity_type='save',
+        content_title=saved.title,
+        content_id=saved.external_id
+    )
+    
     return Response({
         'success': True,
         'message': 'Makale kütüphaneye kaydedildi',
@@ -1094,6 +1146,15 @@ def library_remove(request):
     deleted, _ = SavedArticle.objects.filter(
         user_id=user_id, external_id=external_id
     ).delete()
+    
+    # Aktivite kaydet (isteğe bağlı)
+    if deleted:
+        from .models import UserActivity
+        UserActivity.objects.create(
+            user_id=user_id,
+            activity_type='remove_save',
+            content_id=external_id
+        )
     
     return Response({
         'success': True,
@@ -1123,4 +1184,71 @@ def library_check(request):
     return Response({
         'success': True,
         'saved_ids': saved_ids
+    })
+
+
+# ============================================================================
+# USER ACTIVITY (Kullanıcı Aktiviteleri)
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def record_activity(request):
+    """Kullanıcı aktivitesini kaydet (Örn: view, search, profile_update)"""
+    from .models import UserActivity
+    
+    user_id = request.data.get('user_id')
+    activity_type = request.data.get('activity_type')
+    
+    if not user_id or not activity_type:
+        return Response({'success': False, 'message': 'user_id ve activity_type gerekli'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        activity = UserActivity.objects.create(
+            user_id=user_id,
+            activity_type=activity_type,
+            content_title=request.data.get('content_title', ''),
+            content_id=request.data.get('content_id', ''),
+            query=request.data.get('query', '')
+        )
+        return Response({
+            'success': True,
+            'message': 'Aktivite kaydedildi',
+            'activity_id': activity.id
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'success': False, 'message': str(e)}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_recent_activities(request):
+    """Kullanıcının son aktivitelerini getir"""
+    from .models import UserActivity
+    
+    user_id = request.query_params.get('user_id')
+    limit = int(request.query_params.get('limit', 10))
+    
+    if not user_id:
+        return Response({'success': False, 'message': 'user_id gerekli'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+    
+    activities = UserActivity.objects.filter(user_id=user_id)[:limit]
+    
+    results = []
+    for act in activities:
+        results.append({
+            'id': act.id,
+            'type': act.activity_type,
+            'content_title': act.content_title,
+            'content_id': act.content_id,
+            'query': act.query,
+            'created_at': act.created_at.isoformat()
+        })
+    
+    return Response({
+        'success': True,
+        'activities': results
     })

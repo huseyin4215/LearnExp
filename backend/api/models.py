@@ -144,3 +144,35 @@ PREDEFINED_INTERESTS = [
     "Girişimcilik", "Yenilikçilik", "Sürdürülebilirlik", "Enerji",
     "Tarım", "Gıda Teknolojisi", "Uzay Bilimleri"
 ]
+
+
+class UserActivity(models.Model):
+    """Kullanıcı aktivitelerini (arama, kaydetme, görüntüleme) takip eder"""
+    
+    ACTIVITY_TYPES = [
+        ('search', 'Arama'),
+        ('save', 'Kaydetme'),
+        ('remove_save', 'Kaydetmeyi Geri Alma'),
+        ('view', 'Görüntüleme'),
+        ('like', 'Beğenme'),
+        ('remove_like', 'Beğeniyi Geri Alma'),
+        ('profile_update', 'Profil Güncelleme'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
+    
+    # Aktivite detayları
+    content_title = models.CharField(max_length=1000, blank=True, help_text="Makale başlığı veya arama terimi")
+    content_id = models.CharField(max_length=500, blank=True, help_text="Makale ID'si veya URL'si")
+    query = models.TextField(blank=True, help_text="Yapılan arama sorgusu")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Kullanıcı Aktivitesi'
+        verbose_name_plural = 'Kullanıcı Aktiviteleri'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_activity_type_display()} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
